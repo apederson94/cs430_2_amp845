@@ -2,12 +2,14 @@
 
 typedef double *V3;
 
+void scale();
+
 static inline double v3dm_magnitude(V3 a) {
   return sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2]);
 }
 
 static inline void v3dm_unit(V3 a, V3 b) {
-  b = scale(a, 1/v3dm_magnitude(a), b);
+  scale(a, 1/v3dm_magnitude(a), b);
 }
 
 static inline void v3dm_add(V3 a, V3 b, V3 c) {
@@ -37,10 +39,11 @@ static inline void v3dm_project(V3 a, V3 b, V3 c) {
   v3dm_scale(c, v3dm_dot(b, c), c);
 }
 
-static inline void v3dm_distanceFromPoint(V3 a, V3 b) {
+static inline double v3dm_distanceFromPoint(V3 a, V3 b) {
   V3 c;
   v3dm_project(a, b, c);
-  return v3dm_magnitude(v3dm_subtract(b, c, c));
+  v3dm_subtract(b, c, c);
+  return v3dm_magnitude(c);
 }
 
 static inline void v3dm_cross(V3 a, V3 b, V3 c) {

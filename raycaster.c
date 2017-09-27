@@ -11,9 +11,21 @@ Pixel* render(int width, int height) {
   V3 Pij;
   V3 Rd;
   Color color;
+  double x, y, half_width, half_height, width_d_res, height_d_res, iComponent,
+  jComponent, pixelAdjustX, pixelAdjustY;
+  half_width = -width/2;
+  half_height = height/2;
+  width_d_res = width/1024;
+  height_d_res = height/1024;
+  pixelAdjustX = 0.5 * width_d_res;
+  pixelAdjustY = 0.5 * height_d_res;
   for (int i = 0; i < width; i++) {
+    iComponent = i * (width_d_res) + pixelAdjustX
     for (int j = 0; j < height; j++) {
-      //Pif = ...
+      jComponent = (j* height_d_res) + pixelAdjust y;
+      x = half_width + iComponent;
+      y = half_height + jComponent;
+      v3dm_assign(x, y, , a)
       //v3dm_assign(Pij,...);
       //v3dm_assign(Rd,...);
     }
@@ -41,6 +53,7 @@ Color castARay(Object *objects[]) {
   return obj->color;
 }
 
+//MARK: - PARSER FUNCTIONS
 void parse_type(FILE *fh, Object *obj) {
   char *str = (char *) malloc(sizeof(sizeof(double)));
   char *character = malloc(sizeof(char));
@@ -150,8 +163,15 @@ void parse_normal(FILE *fh, Object *obj) {
 void skip_non_alphanum(FILE *fh){
   char character;
   character = fgetc(fh);
+  //compares character to all non-alphanum characters and cycles through them until an alphanum character is found
   while ((character < 48) || (character > 57 && character < 65) || (character > 90 && character < 97) || (character > 122)) {
     character = fgetc(fh);
   }
+  //replaces alphanum character that was pulled from the file
   ungetc(character, fh);
+}
+
+int main(int argc, char const *argv[]) {
+
+  return 0;
 }
