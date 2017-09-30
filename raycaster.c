@@ -6,7 +6,7 @@
 #include <math.h>
 
 void skip_non_alphanum();
-double intersection();
+/*double intersection();
 
 double intersection(V3 Pij, Object object) {
   double b, c;
@@ -54,7 +54,7 @@ Pixel* render(int width, int height, double xRes, double yRes, double focalLengt
       y = half_height + jComponent;
 
       v3dm_assign(x, y, -focalLength, Pij);
-      t = intersection(Pij, );
+      t = 0;//intersection(Pij, );
       if (t != -1) {
         v3dm_unit(Pij, Rd);
         v3dm_scale(Rd, t, Rd);
@@ -89,25 +89,26 @@ Color castARay(Object *objects[], V3 Rd, V3 Ro) {
     obj = obj->next;
   }
   return closest_obj->color;
-}
+}*/
 
 //MARK: - PARSER FUNCTIONS
 void parse_type(FILE *fh, Object *obj) {
   char *str = (char *) malloc(sizeof(sizeof(double)));
   char *character = malloc(sizeof(char));
+
   sprintf(character, "%c", fgetc(fh));
   while (*character != 44) {
     strcat(str, character);
     sprintf(character, "%c", fgetc(fh));
   }
-  skip_non_alphanum(fh);
-  if (strcmp(str, "sphere")) {
+  if (strcmp(str, "sphere") == 0) {
     obj->kind = "SPHERE";
-  } else if (strcmp(str, "plane")) {
+  } else if (strcmp(str, "plane") == 0) {
     obj->kind = "PLANE";
-  } else if (strcmp(str, "camera")) {
+  } else if (strcmp(str, "camera") == 0) {
     obj->kind = "CAMERA";
   }
+  skip_non_alphanum(fh);
 }
 
 void parse_field(FILE *fh, Object *obj) {
@@ -119,9 +120,9 @@ void parse_field(FILE *fh, Object *obj) {
     sprintf(character, "%c", fgetc(fh));
   }
   skip_non_alphanum(fh);
-  if (strcmp(str, "width")) {
+  if (strcmp(str, "width") == 0) {
     fscanf(fh, "%lf", &obj->width);
-  } else if (strcmp(str, "height")) {
+  } else if (strcmp(str, "height") == 0) {
     fscanf(fh, "%lf", &obj->height);
   }
   skip_non_alphanum(fh);
@@ -136,10 +137,11 @@ void parse_radius(FILE *fh, Object *obj) {
     sprintf(character, "%c", fgetc(fh));
   }
   skip_non_alphanum(fh);
-  if (strcmp(str, "radius")) {
+  if (strcmp(str, "radius") == 0) {
     fscanf(fh, "%lf", &obj->radius);
   }
-  skip_non_alphanum(fh);
+  fgetc(fh);
+  fgetc(fh);
 }
 
 void parse_position(FILE *fh, Object *obj) {
@@ -151,12 +153,12 @@ void parse_position(FILE *fh, Object *obj) {
     sprintf(character, "%c", fgetc(fh));
   }
   if (strcmp(str, "position")) {
-    skip_non_alphanum(fh);
-    fscanf(fh, "%lf", &obj->position[0]);
     fgetc(fh);
-    fscanf(fh, "%lf", &obj->position[1]);
+    fscanf(fh, "%lf", &obj->position.x);
     fgetc(fh);
-    fscanf(fh, "%lf", &obj->position[2]);
+    fscanf(fh, "%lf", &obj->position.y);
+    fgetc(fh);
+    fscanf(fh, "%lf", &obj->position.z);
   }
   skip_non_alphanum(fh);
 }
@@ -170,12 +172,12 @@ void parse_color(FILE *fh, Object *obj) {
     sprintf(character, "%c", fgetc(fh));
   }
   skip_non_alphanum(fh);
-  if (strcmp(str, "color")) {
-    fscanf(fh, "%i", &obj->color.r);
+  if (strcmp(str, "color") == 0) {
+    fscanf(fh, "%lf", &obj->color.r);
     fgetc(fh);
-    fscanf(fh, "%i", &obj->color.g);
+    fscanf(fh, "%lf", &obj->color.g);
     fgetc(fh);
-    fscanf(fh, "%i", &obj->color.b);
+    fscanf(fh, "%lf", &obj->color.b);
   }
   skip_non_alphanum(fh);
 }
@@ -189,12 +191,12 @@ void parse_normal(FILE *fh, Object *obj) {
     sprintf(character, "%c", fgetc(fh));
   }
   skip_non_alphanum(fh);
-  if (strcmp(str, "normal")) {
-    fscanf(fh, "%lf", &obj->normal[0]);
+  if (strcmp(str, "normal") == 0) {
+    fscanf(fh, "%lf", &obj->normal.x);
     fgetc(fh);
-    fscanf(fh, "%lf", &obj->normal[1]);
+    fscanf(fh, "%lf", &obj->normal.y);
     fgetc(fh);
-    fscanf(fh, "%lf", &obj->normal[2]);
+    fscanf(fh, "%lf", &obj->normal.z);
   }
   skip_non_alphanum(fh);
 }
@@ -204,6 +206,7 @@ void skip_non_alphanum(FILE *fh){
   character = fgetc(fh);
   //compares character to all non-alphanum characters and cycles through them until an alphanum character is found
   while ((character < 48) || (character > 57 && character < 65) || (character > 90 && character < 97) || (character > 122)) {
+
     character = fgetc(fh);
   }
   //replaces alphanum character that was pulled from the file
@@ -211,36 +214,60 @@ void skip_non_alphanum(FILE *fh){
 }
 
 int main(int argc, char const *argv[]) {
-
-  return 0;
-}
-
-int int main(int argc, char const *argv[]) {
   FILE *fh;
-  Object *object;
   Pixel *image;
-  char character;
-  double xRes, yRes;
+  int ctr = 0;
+  Object *object = malloc(sizeof(Object));
+  Object *objects[128];
+  char character, *output;
+  double xRes, yRes, width, height;
   xRes = 1024;
   yRes = 1024;
-  fh = fopen(argv[3]);
+  width = 50;
+  height = 50;
+  fh = fopen(argv[3], "r");
   character = fgetc(fh);
   ungetc(character, fh);
-  while(character != '\0') {
-    parse_field(fh, object);
-    if (strcmp(object->kind, "CAMERA")) {
+  while(character != EOF) {
+    parse_type(fh, object);
+    if (strcmp(object->kind, "CAMERA") == 0) {
+      printf("Kind: %s\n", object->kind);
       parse_field(fh, object);
+      printf("Width: %lf\n", object->width);
       parse_field(fh, object);
-    } else if (strcmp(object->kind, "SPHERE")) {
+      printf("Height: %lf\n", object->height);
+    } else if (strcmp(object->kind, "SPHERE") == 0) {
+      printf("Kind: %s\n", object->kind);
       parse_color(fh, object);
+      printf("Red: %lf\n", object->color.r);
+      printf("Green: %lf\n", object->color.g);
+      printf("Blue: %lf\n", object->color.b);
       parse_position(fh, object);
+      printf("posX: %lf\n", object->position.x);
+      printf("posY: %lf\n", object->position.y);
+      printf("posZ: %lf\n", object->position.z);
       parse_radius(fh, object);
-    } else if (strcmp(object->kind, "PLANE")) {
+      printf("Radius: %lf\n", object->radius);
+    } else if (strcmp(object->kind, "PLANE") == 0) {
+      printf("Kind: %s\n", object->kind);
       parse_color(fh, object);
+      printf("Red: %lf\n", object->color.r);
+      printf("Green: %lf\n", object->color.g);
+      printf("Blue: %lf\n", object->color.b);
       parse_position(fh, object);
+      printf("posX: %lf\n", object->position.x);
+      printf("posY: %lf\n", object->position.y);
+      printf("posZ: %lf\n", object->position.z);
       parse_normal(fh, object);
+      printf("normX: %lf\n", object->normal.x);
+      printf("normY: %lf\n", object->normal.y);
+      printf("normZ: %lf\n", object->normal.z);
     }
+    character = fgetc(fh);
+    ungetc(character, fh);
+    objects[ctr] = object;
+    ctr++;
   }
-  image = render(xRes, yRes, width, height, )
+  //image = render(xRes, yRes, width, height, )
   return 0;
 }
