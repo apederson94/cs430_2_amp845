@@ -2,9 +2,9 @@
 #define  STRUCT_H
 
 typedef struct Color {
-  int r;
-  int g;
-  int b;
+  double r;
+  double g;
+  double b;
 } Color;
 
 typedef struct Object {
