@@ -92,6 +92,8 @@ Color castARay(Object *objects[], V3 Rd, V3 Ro) {
 }*/
 
 //MARK: - PARSER FUNCTIONS
+
+//parses the object type from csv
 void parse_type(FILE *fh, Object *obj) {
   char *str = (char *) malloc(sizeof(sizeof(double)));
   char *character = malloc(sizeof(char));
@@ -111,6 +113,7 @@ void parse_type(FILE *fh, Object *obj) {
   skip_non_alphanum(fh);
 }
 
+//prases width and height fields from csv
 void parse_field(FILE *fh, Object *obj) {
   char *str = (char *) malloc(sizeof(char) * 9);
   char *character = malloc(sizeof(char));
@@ -128,6 +131,7 @@ void parse_field(FILE *fh, Object *obj) {
   skip_non_alphanum(fh);
 }
 
+//parses radius from csv
 void parse_radius(FILE *fh, Object *obj) {
   char *str = (char *) malloc(sizeof(char) * 6);
   char *character = malloc(sizeof(char));
@@ -143,6 +147,7 @@ void parse_radius(FILE *fh, Object *obj) {
   fgetc(fh);
 }
 
+//parses position from csv
 void parse_position(FILE *fh, Object *obj) {
   char *str = (char *) malloc(sizeof(char) * 8);
   char *character = malloc(sizeof(char));
@@ -162,6 +167,7 @@ void parse_position(FILE *fh, Object *obj) {
   skip_non_alphanum(fh);
 }
 
+//parses color from csv
 void parse_color(FILE *fh, Object *obj) {
   char *str = (char *) malloc(sizeof(char) * 5);
   char *character = malloc(sizeof(char));
@@ -181,6 +187,7 @@ void parse_color(FILE *fh, Object *obj) {
   skip_non_alphanum(fh);
 }
 
+//parses the normal vector from csv
 void parse_normal(FILE *fh, Object *obj) {
   char *str = (char *) malloc(sizeof(char) * 6);
   char *character = malloc(sizeof(char));
@@ -204,34 +211,11 @@ void parse_normal(FILE *fh, Object *obj) {
   }
 }
 
-void skip_non_alphanum(FILE *fh){
-  char character;
-  character = fgetc(fh);
-  //compares character to all non-alphanum characters and cycles through them until an alphanum character is found
-  while ((character < 48) || (character > 57 && character < 65) || (character > 90 && character < 97) || (character > 122)) {
-
-    character = fgetc(fh);
-  }
-  //replaces alphanum character that was pulled from the file
-  ungetc(character, fh);
-}
-
-int main(int argc, char const *argv[]) {
-  FILE *fh;
-  Pixel *image;
-  int ctr = 0;
-  Object *object = malloc(sizeof(Object));
-  Object *objects[128];
-  char character, *output;
-  double xRes, yRes, width, height;
-  xRes = 1024;
-  yRes = 1024;
-  width = 50;
-  height = 50;
-  fh = fopen(argv[3], "r");
-  character = fgetc(fh);
-  ungetc(character, fh);
-  while(character != EOF) {
+//comprehensive parser that combines all parser helper functions
+Object* parse_csv(FILE *fh, Object *object, char character) {
+  char new_char;
+  if (character != EOF) {
+    Object *object_next = malloc(sizeof(Object));
     parse_type(fh, object);
     if (strcmp(object->kind, "CAMERA") == 0) {
       parse_field(fh, object);
@@ -245,11 +229,96 @@ int main(int argc, char const *argv[]) {
       parse_position(fh, object);
       parse_normal(fh, object);
     }
-    character = fgetc(fh);
-    ungetc(character, fh);
-    objects[ctr] = object;
-    ctr++;
+    object_next->prev = object;
+    object->next = object_next;
+    new_char = fgetc(fh);
+    ungetc(new_char, fh);
+    parse_csv(fh, object_next, new_char);
+  } else {
+    return object;
   }
-  //image = render(xRes, yRes, width, height, )
+
+}
+
+//skips all non-alphanumeric characters in a file
+void skip_non_alphanum(FILE *fh){
+  char character;
+  character = fgetc(fh);
+  //compares character to all non-alphanum characters and cycles through them until an alphanum character is found
+  while ((character < 48) || (character > 57 && character < 65) || (character > 90 && character < 97) || (character > 122)) {
+
+    character = fgetc(fh);
+  }
+  //replaces alphanum character that was pulled from the file
+  ungetc(character, fh);
+}
+
+//helper function to make sure parser was working correctly.
+//TODO: REMOVE BEFORE TURNING IN
+void print_all(Object *object) {
+  Object *object1 = malloc(sizeof(Object));
+  object1 = object;
+  while (object1->next != NULL) {
+    printf("KIND: %s\nRADIUS: %lf\nWIDTH: %lf\nHEIGHT: %lf\nPOSITIONX: %lf\nPOSITIONY: %lf\nPOSITIONZ: %lf\nNORMALX: %lf\nNORMALY: %lf\nNORMALZ: %lf\nCOLORR: %lf\nCOLORG: %lf\nCOLORB: %lf\n",
+  object1->kind, object1->radius, object1->width, object1->height, object1->position.x, object1->position.y, object1->position.z, object1->normal.x, object1->normal.y, object1->normal.z, object1->color.r, object1->color.g, object1->color.b);
+  object1 = object1->next;
+  }
+}
+
+Object* rewind_linked_list(Object *object) {
+  if (object->prev != NULL) {
+    rewind_linked_list(object->prev);
+  } else {
+    return object;
+  }
+}
+
+//returns camera width
+double get_width(Object *object) {
+  if (strcmp(object->kind, "CAMERA") == 0) {
+    return object->width;
+  } else if (object->next == NULL) {
+    //TODO: ERROR HERE FOR NO CAMERA OBJECT IN LINKED LIST
+  } else {
+    get_width(object->next);
+  }
+}
+
+//returns camera height
+double get_height(Object *object) {
+  if (strcmp(object->kind, "CAMERA") == 0) {
+    return object->height;
+  } else if (object->next == NULL) {
+    //TODO: ERROR HERE FOR NO CAMERA OBJECT IN LINKED LIST
+  } else {
+    get_height(object->next);
+  }
+}
+
+//MARK: -MAIN FUNCTION
+int main(int argc, char const *argv[]) {
+  //variables for setup later
+  FILE *input_file, *output_file;
+  Pixel *image;
+  char character;
+  double width, height;
+
+  //setting up some variables
+  Object *object = malloc(sizeof(Object));
+  Object *result = malloc(sizeof(Object));
+  input_file = fopen(argv[3], "r");
+  character = fgetc(fh);
+
+  //replacing character in file for parser to work correctly
+  ungetc(character, fh);
+
+  //parsing to return object
+  result = parse_csv(fh, object, character);
+  result = rewind_linked_list(result);
+  width = get_width(result);
+  height = get_height(result);
+  result = rewind_linked_list(result);
+
+
   return 0;
 }

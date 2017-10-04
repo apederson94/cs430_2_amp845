@@ -13,7 +13,7 @@ typedef struct Object {
   char *kind;
   double radius, width, height;
   struct Vector3 position, normal;
-  //struct Normal normal;
+  struct Object *prev, *next;
   struct Color color;
 } Object;
 
