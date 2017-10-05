@@ -2,7 +2,7 @@
 
 typedef struct Vector3 {
   double x, y, z;
-} Vecotr3;
+} Vector3;
 
 void scale();
 

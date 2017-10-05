@@ -179,11 +179,19 @@ void print_all(Object *object) {
   }
 }
 
-Object* rewind_linked_list(Object *object) {
+Object* rewind_linked_object_list(Object *object) {
   if (object->prev != NULL) {
-    rewind_linked_list(object->prev);
+    rewind_linked_object_list(object->prev);
   } else {
     return object;
+  }
+}
+
+Pixel* rewind_linked_object_list(Pixel *pixel) {
+  if (pixel->prev != NULL) {
+    rewind_linked_object_list(pixel->prev);
+  } else {
+    return pixel;
   }
 }
 
@@ -209,7 +217,7 @@ double get_height(Object *object) {
   }
 }
 
-double argv_to_double(char const *str, int index, double result) {
+double argv_to_double(char const *str, double index, double result) {
   if (index == strlen(str)) {
     return result;
   } else {
@@ -228,6 +236,9 @@ void write_pixels_to_file(FILE *fh, Pixel *pixel) {
     fprintf(fh, "%lf\n", pixel->color->b);
     write_pixels_to_file(fh, pixel->next);
   } else {
+    fprintf(fh, "%lf\n", pixel->color->r);
+    fprintf(fh, "%lf\n", pixel->color->g);
+    fprintf(fh, "%lf\n", pixel->color->b);
     return;
   }
 }
@@ -236,60 +247,126 @@ void write_pixels_to_file(FILE *fh, Pixel *pixel) {
 
 void intersection_sphere(Vector3 *Rd, Vecotr3 *Ro, double Cx, double Cy, double Cz, Vector3 *result) {
   double b, c, t0, t1;
-  b = -2 * (Rd.x + Rd.y + Rd.z)
+  b = -2 * (Rd->x + Rd->y + Rd->z)
   c = ((Cx * Cx) + (Cy * Cy) + (Cz * Cz));
   t0 = -b + (sqrt((b * b) - (4 * c)) / 2)
   t1 = -b - (sqrt((b * b) - (4 * c)) / 2)
   if (t0 >= 0 && t1 >= 0) {
     if (t0 < t1) {
-      result.x = Ro.x + (Rd.x * t0);
-      result.y = Ro.y + (Rd.y * t0);
-      result.z = Ro.z + (Rd.z * t0);
+      result->x = Ro->x + (Rd->x * t0);
+      result->y = Ro->y + (Rd->y * t0);
+      result->z = Ro->z + (Rd->z * t0);
     } else if (t1 < t0) {
-      result.x = Ro.x + (Rd.x * t1);
-      result.y = Ro.y + (Rd.y * t1);
-      result.z = Ro.z + (Rd.z * t1);
+      result->x = Ro->x + (Rd->x * t1);
+      result->y = Ro->y + (Rd->y * t1);
+      result->z = Ro->z + (Rd->z * t1);
     } else {
       //TODO: ERROR THESE SHOULD NEVER BE EQUAL! could just return one tho (?)
     }
   } else if (t0 < 0 && t1 >= 0) {
-    result.x = Ro.x + (Rd.x * t1);
-    result.y = Ro.y + (Rd.y * t1);
-    result.z = Ro.z + (Rd.z * t1);
+    result->x = Ro->x + (Rd->x * t1);
+    result->y = Ro->y + (Rd->y * t1);
+    result->z = Ro->z + (Rd->z * t1);
   } else if (t1 < 0 && t0 >= 0) {
-    result.x = Ro.x + (Rd.x * t0);
-    result.y = Ro.y + (Rd.y * t0);
-    result.z = Ro.z + (Rd.z * t0);
+    result->x = Ro->x + (Rd->x * t0);
+    result->y = Ro->y + (Rd->y * t0);
+    result->z = Ro->z + (Rd->z * t0);
   } else {
-    result.x = -1;
-    result.y = -1;
-    result.z = -1;
+    result->x = -1;
+    result->y = -1;
+    result->z = -1;
   }
 }
 
 void intersection_plane(Vector3 *Ro, Vector3 *Rd, Vector3 *norm, Vector3 *result) {
   double dotRo, dotRd, d, t;
   Vector3 origin;
-  origin.x = 0;
-  origin.y = 0;
-  origin.z = 0;
+  origin->x = 0;
+  origin->y = 0;
+  origin->z = 0;
   d = v3dm_distanceFromPoint(norm, origin);
   dotRo = v3dm_dot(norm, Ro);
   dotRd = v3dm_dot(norm, Rd);
   t = -(dotRo + d) / (dotRd);
-  result.x = Ro.x + (Rd.x * t);
-  result.y = Ro.y + (Rd.y * t);
-  result.z = Ro.z + (Rd.z * t);
+  if (t >= 0) {
+    result->x = Ro->x + (Rd->x * t);
+    result->y = Ro->y + (Rd->y * t);
+    result->z = Ro->z + (Rd->z * t);
+  } else {
+    result->x = -1;
+    result->y = -1;
+    result->z = -1;
+  }
+
 }
 
-Color castARay(Object *object, Vector3 *Ro, Vector3 *Rd, Object *closest_obj, double closest_t) {
-  Vector3 *intersection;
+Color* castARay(Object *object, Vector3 *Ro, Vector3 *Rd, Object *closest_obj, double closest_intersection) {
+  Vector3 intersection;
+  double *distance;
   if (object->next != NULL) {
     if (strcmp(object->kind, "SPHERE") == 0) {
       intersection_sphere(Rd, Ro, object->position.x, object->position.y, object->position.z, intersection);
     } else if (strcmp(object->kind, "PLANE") == 0) {
       intersection_plane(Ro, Rd, object->normal, intersection);
     }
+    distance = v3dm_distanceFromPoint(Ro, intersection);
+    if (distance < closest_intersection) {
+      castARay(object->next, Ro, Rd, object, distance);
+    } else {
+      castARay(object->next, Ro, Rd, closest_obj, closest_intersection);
+    }
+  } else {
+    if (strcmp(object->kind, "SPHERE") == 0) {
+      intersection_sphere(Rd, Ro, object->position.x, object->position.y, object->position.z, intersection);
+    } else if (strcmp(object->kind, "PLANE") == 0) {
+      intersection_plane(Ro, Rd, object->normal, intersection);
+    }
+    distance = v3dm_distanceFromPoint(Ro, intersection);
+    if (distance < closest_intersection) {
+      return object->color;
+    } else {
+      return closest_obj->color;
+    }
+  }
+}
+
+Pixel* render(double width, double height, double xRes, double yRes, Object *object) {
+  double xComponent, yComponent, xAdjust, yAdjust, xAdd, yAdd, counter;
+  Vector3 *Pij, *Rd, *Ro;
+  Color color;
+  Pixel *pixel;
+  v3dm_assign(0, 0, 0, Ro);
+  Pixel *pixels = malloc(sizeof(Pixel) * width * height);
+  counter = 0;
+  xAdjust = (width/xRes);
+  xAdd = (0.5 * xAdjust) + xAdjust;
+  xAdd += (-0.5 * width);
+  yAdjust = height/yRes;
+  yAdd = (0.5 * yAdjust) + yAdjust;
+  yAdd += (-0.5 * height);
+  for (int i = 0; i < width, i++) {
+    for (int j = 0; j < height; j++) {
+      v3dm_assign(xAdd, yAdd, -1, Pij);
+      v3dm_add(Pij, Ro, Rd);
+      color = castARay(object, Ro, Rd, object, INFINITY);
+      pixel->color = color;
+      pixels[counter];
+      counter += sizeof(Pixel);
+    }
+    yAdd += yAdjust;
+  }
+  xAdd += xAdjust;
+}
+
+Pixel* create_pixel_linked_list(Pixel *image, double index, Pixel *current_pixel) {
+  Pixel *new_pixel;
+  if (index < sizeof(image)) {
+    new_pixel = image[index];
+    current_pixel->next = new_pixel;
+    new_pixel->prev = current_pixel;
+    create_pixel_linked_list(pixel->next, index + sizeof(Pixel), new_pixel);
+  } else {
+    return current_pixel;
   }
 }
 
@@ -297,10 +374,10 @@ Color castARay(Object *object, Vector3 *Ro, Vector3 *Rd, Object *closest_obj, do
 int main(int argc, char const *argv[]) {
   //variables for setup later
   FILE *input_file, *output_file;
-  Pixel *image;
+  Pixel *image, *pixel;
   char character;
   double width, height, xRes, yRes;
-  int index = 0;
+  double index = 0;
 
   //setting up some variables
   Object *object = malloc(sizeof(Object));
@@ -319,13 +396,26 @@ int main(int argc, char const *argv[]) {
   fclose(input_file);
 
   //rewinding linked_list then getting width & height from camera and rewinding again
-  result = rewind_linked_list(result);
+  result = rewind_linked_object_list(result);
   width = get_width(result);
   height = get_height(result);
-  result = rewind_linked_list(result);
+  result = rewind_linked_object_list(result);
 
+  //rendering image
+  image = render(Ro, width, height, xRes, yRes, object);
+  rewind_linked_object_list(object);
 
+  //setting up image file
+  output_file = fopen(argv[4], "w");
+  fprintf(output_file, "%s\n%s\n%lf\n%lf\n%d", "P3", "Created by Austin Pederson's raycaster",xRes, yRes, 255);
 
+  //writing to image file
+  index = sizeof(Pixel);
+  pixel = image[0];
+  pixel = create_pixel_linked_list(image, index, pixel);
+  rewind_linked_pixel_list(pixel);
+  write_pixels_to_file(output_file, pixel);
+  fclose(output_file);
 
   return 0;
 }
