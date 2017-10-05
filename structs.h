@@ -19,6 +19,7 @@ typedef struct Object {
 
 typedef struct Pixel {
   struct Color color;
+  struct Pixel *next, *prev;
 } Pixel;
 
 #endif

@@ -6,91 +6,6 @@
 #include <math.h>
 
 void skip_non_alphanum();
-/*double intersection();
-
-double intersection(V3 Pij, Object object) {
-  double b, c;
-  if (object.kind == "SPHERE") {
-    b = -2*(Pij[0] + Pij[1] + Pij[2]);
-    c = (Cx*Cx) + (Cy*Cy) + (Cz*Cz) + (r*r);
-    t0 = -b + (sqrt((b*b) - (4 *c))/2);
-    t1 = -b - (sqrt((b*b) - (4 *c))/2);
-    if (t0 > t1) {
-      return t1;
-    } else if (t1 > t0) {
-      return t0;
-    }
-  } else if (object.kind == "PLANE") {
-    //TODO: Plane intersection
-  }
-  return -1;
-}
-
-//renders the image
-Pixel* render(int width, int height, double xRes, double yRes, double focalLength, double r, Object *objects[]) {
-  V3 Pij;
-  V3 Rd, Ro;
-  Pixel pixel;
-  Pixel *pixels[] = malloc(sizeof(int) * width * height * 3);
-  Color color;
-  double x, y, half_width, half_height, width_d_res, height_d_res, iComponent,
-  jComponent, pixelAdjustX, pixelAdjustY, t;
-  half_width = -width/2;
-  half_height = height/2;
-  width_d_res = width/xRes;
-  height_d_res = height/yRes;
-  pixelAdjustX = width_d_res/2;
-  pixelAdjustY = height_d_res/2;
-  v3dm_assign(0, 0, 0, Ro);
-  //loops over rows
-  for (int i = 0; i < width; i++) {
-    //x calculation
-    iComponent = i * (width_d_res) + pixelAdjustX
-    x = half_width + iComponent;
-    //loops over columns
-    for (int j = 0; j < height; j++) {
-      //y calculation
-      jComponent = (j* height_d_res) + pixelAdjust y;
-      y = half_height + jComponent;
-
-      v3dm_assign(x, y, -focalLength, Pij);
-      t = 0;//intersection(Pij, );
-      if (t != -1) {
-        v3dm_unit(Pij, Rd);
-        v3dm_scale(Rd, t, Rd);
-        color = castARay(objects, Rd, Ro);
-        color.r *= 255;
-        color.g *= 255;
-        color.b *= 255;
-      } else {
-        color.r = 0;
-        color.g = 0;
-        color.b = 0;
-      }
-      pixel.color = color;
-      pixels[sizeof(int) * (i*width + j)] = pixel;
-    }
-  }
-  return pixels;
-}
-
-Color castARay(Object *objects[], V3 Rd, V3 Ro) {
-  Object *obj = objects[0];
-  double closest_t = INFINITY;
-  double t;
-  V3 *Ro, Rd;
-  Object *closest_obj;
-  while (obj != NULL) {
-    t = intersection(Ro, Rd, obj);
-    if (t < closest_t) {
-      closest_t = t;
-      closest_obj = obj;
-    }
-    obj = obj->next;
-  }
-  return closest_obj->color;
-}*/
-
 //MARK: - PARSER FUNCTIONS
 
 //parses the object type from csv
@@ -237,7 +152,6 @@ Object* parse_csv(FILE *fh, Object *object, char character) {
   } else {
     return object;
   }
-
 }
 
 //skips all non-alphanumeric characters in a file
@@ -295,29 +209,122 @@ double get_height(Object *object) {
   }
 }
 
+double argv_to_double(char const *str, int index, double result) {
+  if (index == strlen(str)) {
+    return result;
+  } else {
+    double updated_result = result;
+    char character = str[index];
+    updated_result *= 10;
+    updated_result += character - '0';
+    argv_to_double(str, index + 1, updated_result);
+  }
+}
+
+void write_pixels_to_file(FILE *fh, Pixel *pixel) {
+  if (pixel->next != NULL) {
+    fprintf(fh, "%lf\n", pixel->color->r);
+    fprintf(fh, "%lf\n", pixel->color->g);
+    fprintf(fh, "%lf\n", pixel->color->b);
+    write_pixels_to_file(fh, pixel->next);
+  } else {
+    return;
+  }
+}
+
+//MARK: -CALCULATIONS
+
+void intersection_sphere(Vector3 *Rd, Vecotr3 *Ro, double Cx, double Cy, double Cz, Vector3 *result) {
+  double b, c, t0, t1;
+  b = -2 * (Rd.x + Rd.y + Rd.z)
+  c = ((Cx * Cx) + (Cy * Cy) + (Cz * Cz));
+  t0 = -b + (sqrt((b * b) - (4 * c)) / 2)
+  t1 = -b - (sqrt((b * b) - (4 * c)) / 2)
+  if (t0 >= 0 && t1 >= 0) {
+    if (t0 < t1) {
+      result.x = Ro.x + (Rd.x * t0);
+      result.y = Ro.y + (Rd.y * t0);
+      result.z = Ro.z + (Rd.z * t0);
+    } else if (t1 < t0) {
+      result.x = Ro.x + (Rd.x * t1);
+      result.y = Ro.y + (Rd.y * t1);
+      result.z = Ro.z + (Rd.z * t1);
+    } else {
+      //TODO: ERROR THESE SHOULD NEVER BE EQUAL! could just return one tho (?)
+    }
+  } else if (t0 < 0 && t1 >= 0) {
+    result.x = Ro.x + (Rd.x * t1);
+    result.y = Ro.y + (Rd.y * t1);
+    result.z = Ro.z + (Rd.z * t1);
+  } else if (t1 < 0 && t0 >= 0) {
+    result.x = Ro.x + (Rd.x * t0);
+    result.y = Ro.y + (Rd.y * t0);
+    result.z = Ro.z + (Rd.z * t0);
+  } else {
+    result.x = -1;
+    result.y = -1;
+    result.z = -1;
+  }
+}
+
+void intersection_plane(Vector3 *Ro, Vector3 *Rd, Vector3 *norm, Vector3 *result) {
+  double dotRo, dotRd, d, t;
+  Vector3 origin;
+  origin.x = 0;
+  origin.y = 0;
+  origin.z = 0;
+  d = v3dm_distanceFromPoint(norm, origin);
+  dotRo = v3dm_dot(norm, Ro);
+  dotRd = v3dm_dot(norm, Rd);
+  t = -(dotRo + d) / (dotRd);
+  result.x = Ro.x + (Rd.x * t);
+  result.y = Ro.y + (Rd.y * t);
+  result.z = Ro.z + (Rd.z * t);
+}
+
+Color castARay(Object *object, Vector3 *Ro, Vector3 *Rd, Object *closest_obj, double closest_t) {
+  Vector3 *intersection;
+  if (object->next != NULL) {
+    if (strcmp(object->kind, "SPHERE") == 0) {
+      intersection_sphere(Rd, Ro, object->position.x, object->position.y, object->position.z, intersection);
+    } else if (strcmp(object->kind, "PLANE") == 0) {
+      intersection_plane(Ro, Rd, object->normal, intersection);
+    }
+  }
+}
+
 //MARK: -MAIN FUNCTION
 int main(int argc, char const *argv[]) {
   //variables for setup later
   FILE *input_file, *output_file;
   Pixel *image;
   char character;
-  double width, height;
+  double width, height, xRes, yRes;
+  int index = 0;
 
   //setting up some variables
   Object *object = malloc(sizeof(Object));
   Object *result = malloc(sizeof(Object));
   input_file = fopen(argv[3], "r");
-  character = fgetc(fh);
+  character = fgetc(input_file);
+  xRes = argv_to_double(argv[1], index, xRes);
+  yRes = argv_to_double(argv[2], index, yRes);
+
 
   //replacing character in file for parser to work correctly
-  ungetc(character, fh);
+  ungetc(character, input_file);
 
   //parsing to return object
-  result = parse_csv(fh, object, character);
+  result = parse_csv(input_file, object, character);
+  fclose(input_file);
+
+  //rewinding linked_list then getting width & height from camera and rewinding again
   result = rewind_linked_list(result);
   width = get_width(result);
   height = get_height(result);
   result = rewind_linked_list(result);
+
+
 
 
   return 0;
