@@ -234,7 +234,7 @@ void intersection_sphere(Vector3 *Rd, Vector3 *Ro, double Cx, double Cy, double 
   c = ((Cx * Cx) + (Cy * Cy) + (Cz * Cz));
   t0 = -b + (sqrt((b * b) - (4 * c)) / 2);
   t1 = -b - (sqrt((b * b) - (4 * c)) / 2);
-  printf("t0: %lf\nt1: %lf\n", t0, t1);
+  //printf("t0: %lf\nt1: %lf\n", t0, t1);
   if (!isnan(t0) && !isnan(t1)) {
     if (t0 >= 0 && t1 >= 0) {
       if (t0 < t1) {
@@ -276,8 +276,9 @@ void intersection_sphere(Vector3 *Rd, Vector3 *Ro, double Cx, double Cy, double 
       x = INFINITY;
       y = INFINITY;
       z = INFINITY;
+      //printf("YO\n");
       v3dm_assign(x, y, z, result);
-      return;
+      //printf("YO\n");
     }
   }
 }
@@ -316,11 +317,12 @@ Color* castARay(Object *object, Vector3 *Ro, Vector3 *Rd, Object *closest_obj, d
   Vector3 *intersection;
   double distance;
   Color *color;
+  intersection = malloc(sizeof(Vector3));
   if (object->kind != NULL) {
-    printf("KIND: %s\n", object->kind);
+    //printf("KIND: %s\n", object->kind);
     if (strcmp(object->kind, "SPHERE") == 0) {
       intersection_sphere(Rd, Ro, object->position.x, object->position.y, object->position.z, intersection);
-      printf("WTF\n");
+      //printf("WTF\n");
     } else if (strcmp(object->kind, "PLANE") == 0) {
       intersection_plane(Ro, Rd, object->normal, intersection);
     } else if (strcmp(object->kind, "CAMERA") == 0) {
@@ -329,7 +331,9 @@ Color* castARay(Object *object, Vector3 *Ro, Vector3 *Rd, Object *closest_obj, d
     //print_v3(intersection);
     if (!isinf(intersection->x)) {
       distance = v3dm_distanceFromPoint(Ro, intersection);
-      if (distance < closest_intersection) {
+      if (isinf(closest_intersection)) {
+        castARay(object->next, Ro, Rd, object, distance);
+      } else  if (distance < closest_intersection) {
         castARay(object->next, Ro, Rd, object, distance);
       } else {
         castARay(object->next, Ro, Rd, closest_obj, closest_intersection);
@@ -345,6 +349,7 @@ Color* castARay(Object *object, Vector3 *Ro, Vector3 *Rd, Object *closest_obj, d
       color->b = 0;
       return color;
     } else {
+      printf("%lf\n", closest_obj->color.b);
       return &closest_obj->color;
     }
   }
@@ -358,25 +363,24 @@ double* render(double width, double height, double xRes, double yRes, Object *ob
   Ro = malloc(sizeof(Vector3));
   Pij = malloc(sizeof(Vector3));
   Rd = malloc(sizeof(Vector3));
-  colors = malloc(sizeof(double) * xRes * yRes * 3);
+  colors = malloc(sizeof(double) * sizeof(double) * xRes * yRes * 3);
   v3dm_assign(0, 0, 0, Ro);
   int counter = 0;
   for (int i = 0; i < xRes; i++) {
     printf("%d\n", i);
+    x = -(width/2) + (i * (width/xRes)) + (0.5 * (width/xRes));
     for (int j = 0; j < yRes; j++) {
-      //TODO: rewrite the fucking bullshit here to give Pij a value or something
-      x = -(width/2) + (i * (width/xRes)) + (0.5 * (width/xRes));
+      //TODO: array issues
       y = -(height/2) + (j * (height/yRes)) + (0.5 * (width/yRes));
       v3dm_assign(x, y, -1, Pij);
       v3dm_add(Pij, Ro, Rd);
-      //ERROR IN THIS BITCH RIGHT HERE MAFK
       color = castARay(object, Ro, Rd, object, INFINITY);
       colors[counter] = color->r;
-      counter += sizeof(double);
+      counter += (int) sizeof(double);
       colors[counter] = color->g;
-      counter += sizeof(double);
+      counter += (int) sizeof(double);
       colors[counter] = color->b;
-      counter += sizeof(double);
+      counter += (int) sizeof(double);
     }
   }
   return colors;
@@ -389,10 +393,11 @@ int main(int argc, char const *argv[]) {
   char character;
   double width, height, xRes, yRes, *colors;
   double index = 0;
+  int i, j;
 
   //setting up some variables
   Object *object = malloc(sizeof(Object));
-  Object *result = malloc(sizeof(Object));
+  Object *result_object = malloc(sizeof(Object));
   input_file = fopen(argv[3], "r");
   character = fgetc(input_file);
   xRes = argv_to_double(argv[1], index, xRes);
@@ -403,27 +408,28 @@ int main(int argc, char const *argv[]) {
   ungetc(character, input_file);
 
   //parsing to return object
-  result = parse_csv(input_file, object, character);
+  result_object = parse_csv(input_file, object, character);
   fclose(input_file);
 
   //rewinding linked_list then getting width & height from camera and rewinding again
-  result = rewind_linked_object_list(result);
-  width = get_width(result);
-  height = get_height(result);
-  result = rewind_linked_object_list(result);
+  result_object = rewind_linked_object_list(result_object);
+  width = get_width(result_object);
+  height = get_height(result_object);
+  result_object = rewind_linked_object_list(result_object);
 
   //rendering image
   printf("start rendering\n");
-  colors = render(width, height, xRes, yRes, result);
+  colors = malloc(sizeof(xRes * yRes * sizeof(double) * 3));
+  colors = render(width, height, xRes, yRes, result_object);
   printf("rendered\n");
   rewind_linked_object_list(object);
 
   //setting up image file
   output_file = fopen(argv[4], "w");
-  fprintf(output_file, "%s\n%s\n%lf\n%lf\n%d\n", "P3", "Created by Austin Pederson's raycaster",xRes, yRes, 255);
+  fprintf(output_file, "%s\n%s\n%lf\n%lf\n%d\n", "P3", "Created by Austin Pederson's raycaster", xRes, yRes, 255);
 
   //writing to image file
-  fwrite(colors, sizeof(double), 3 * width * height, output_file);
+  fwrite(colors, sizeof(double), 3 * sizeof(double) * width * height, output_file);
   fclose(output_file);
 
   return 0;
