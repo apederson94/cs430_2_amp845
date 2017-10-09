@@ -55,11 +55,7 @@ static inline double v3dm_distanceFromPoint(Vector3 *a, Vector3 *b) {
   v3dm_project(a, b, c);
   v3dm_subtract(b, c, c);
   result = v3dm_magnitude(c);
-  if (!isnan(result) && !isinf(result)) {
-    return result;
-  } else {
-    return INFINITY;
-  }
+  return result;
 }
 
 static inline void v3dm_cross(Vector3 *a, Vector3 *b, Vector3 *c) {
