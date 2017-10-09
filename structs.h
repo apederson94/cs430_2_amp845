@@ -5,10 +5,6 @@ typedef struct Color {
   double r, g, b;
 } Color;
 
-typedef struct Vector3 {
-  double x, y, z;
-} Position;
-
 typedef struct Object {
   char *kind;
   double radius, width, height;
