@@ -44,17 +44,29 @@ static inline double v3dm_dot(Vector3 *a, Vector3 *b) {
 }
 
 static inline void v3dm_project(Vector3 *a, Vector3 *b, Vector3 *c) {
-  v3dm_unit(a, c);
-  v3dm_scale(c, v3dm_dot(b, c), c);
+  Vector3 *unit_a, *unit_b;
+  double mag_a, scalar;
+  unit_a = malloc(sizeof(Vector3));
+  unit_b = malloc(sizeof(Vector3));
+  mag_a = v3dm_magnitude(a);
+  v3dm_unit(a, unit_a);
+  v3dm_unit(b, unit_b);
+  scalar = mag_a * v3dm_dot(unit_a, unit_b);
+  v3dm_scale(unit_b, scalar, c);
+  free(unit_a);
+  free(unit_b);
 }
 
-static inline double v3dm_distanceFromPoint(Vector3 *a, Vector3 *b) {
-  Vector3 *c;
-  double result;
-  c = malloc(sizeof(Vector3));
-  v3dm_project(a, b, c);
-  v3dm_subtract(b, c, c);
-  result = v3dm_magnitude(c);
+static inline double v3dm_pointToPointDistance(Vector3 *a, Vector3 *b) {
+  return sqrt((b->x - a->x)*(b->x - a->x) + (b->y - a->y)*(b->y - a->y) + (b->z - a->z)*(b->z - a->z));
+}
+
+static inline double v3dm_pointToPlaneDistance(struct Vector3 normal, struct Vector3 point_on, Vector3 *point_off) {
+  double dot, result;
+  Vector3 *tmp = malloc(sizeof(Vector3));
+  v3dm_subtract(point_off, &point_on, tmp);
+  dot = v3dm_dot(&normal, tmp);
+  result = dot/v3dm_magnitude(&normal);
   return result;
 }
 
