@@ -10,8 +10,8 @@ void intersection_sphere();
 
 //MARK: - PARSER FUNCTIONS
 
-void print_color(Color *color) {
-  printf("R: %lf G: %lf B: %lf\n", color->r, color->g, color->b);
+void print_color(Color color) {
+  printf("R: %lf G: %lf B: %lf\n", color.r, color.g, color.b);
 }
 
 //parses the object type from csv
@@ -244,6 +244,7 @@ void intersection_sphere(Vector3 *Rd, Vector3 *Ro, double Cx, double Cy, double 
   b = 2 * ((Rd->x * (Ro->x - Cx)) + (Rd->y * (Ro->y - Cy)) + (Rd->z * (Ro->z - Cz)));
   c = ((Ro->x - Cx) * (Ro->x - Cx)) + ((Ro->y - Cy) * (Ro->y - Cy)) + ((Ro->z - Cz) * (Ro->z - Cz)) - (radius * radius);
   t0 = -b - (sqrt((b * b) - (4 * c)) / 2);
+  //printf("%lf\n", t0);
   if (!isnan(t0) && t0 > 0) {
     v3dm_scale(Rd, t0, result);
     v3dm_add(Ro, result, result);
@@ -278,15 +279,11 @@ void intersection_plane(Vector3 *Ro, Vector3 *Rd, struct Vector3 norm, struct Ve
 }
 
 Color* castARay_non(Object *object, Vector3 *Ro, Vector3 *Rd) {
-  //TODO: ONLY TOP LEFT CORNER ISN'T ALL ZEROES. WHAT THE ACTUAL FUCK.
+  //TODO: Color is broken after first one for some reason
   Vector3 *intersection;
   double closest_distance, distance;
   closest_distance = NAN;
   Color *color;
-  color = malloc(sizeof(Color));
-  color->r = 0.0;
-  color->g = 0.0;
-  color->b = 0.0;
   intersection = malloc(sizeof(Vector3));
   v3dm_assign(NAN, NAN, NAN, intersection);
   for (int i = 0; object->kind != NULL; i++) {
@@ -296,6 +293,7 @@ Color* castARay_non(Object *object, Vector3 *Ro, Vector3 *Rd) {
       } else if (strcmp(object->kind, "PLANE") == 0) {
         intersection_plane(Ro, Rd, object->normal, object->position, intersection);
       }
+
       if (!isnan(intersection->x)) {
         distance = v3dm_pointToPointDistance(Ro, intersection);
         if (isnan(closest_distance)) {
@@ -331,11 +329,9 @@ int* render(double width, double height, double xRes, double yRes, Object *objec
       y = -(height/2) + (j * (height/yRes)) + (0.5 * (width/yRes));
       v3dm_assign(x, y, -1, Pij);
       v3dm_add(Pij, Ro, Rd);
-      color->r = 0.0;
-      color->g = 0.0;
-      color->b = 0.0;
+      v3dm_unit(Rd, Rd);
       color = castARay_non(object, Ro, Rd);
-      //print_color(color);
+      //print_color(*color);
       colors[counter] = (int) color->r * 255;
       counter += (int) sizeof(int);
       colors[counter] = (int) color->g * 255;
@@ -347,8 +343,8 @@ int* render(double width, double height, double xRes, double yRes, Object *objec
   return colors;
 }
 
-void write_to_file(FILE *fh, int *array) {
-  for (int i = 0; i < sizeof(int) * 1024 * 1024 * 3; i+= 8) {
+void write_to_file(FILE *fh, int *array, int xRes, int yRes) {
+  for (int i = 0; i < sizeof(int) * xRes * yRes * 3; i+= 4) {
     //printf("%d\n", i);
     fprintf(fh, "%d\n", (int) array[i]);
   }
@@ -398,7 +394,7 @@ int main(int argc, char const *argv[]) {
   fprintf(output_file, "%s%d\n%s\n%d\n%d\n%d\n", "P", 3, "#superfluous comment", (int) xRes, (int) yRes, 255);
 
   //writing to image file
-  fwrite(colors, sizeof(int), xRes * yRes * sizeof(int) * 3, output_file);
+  write_to_file(output_file, colors, xRes, yRes);
   fclose(output_file);
 
   return 0;
