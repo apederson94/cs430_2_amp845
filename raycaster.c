@@ -7,7 +7,12 @@
 
 void skip_non_alphanum();
 void intersection_sphere();
+
 //MARK: - PARSER FUNCTIONS
+
+void print_color(Color *color) {
+  printf("R: %lf G: %lf B: %lf\n", color->r, color->g, color->b);
+}
 
 //parses the object type from csv
 void parse_type(FILE *fh, Object *obj) {
@@ -87,6 +92,7 @@ void parse_position(FILE *fh, Object *obj) {
 void parse_color(FILE *fh, Object *obj) {
   char *str = (char *) malloc(sizeof(char) * 5);
   char *character = malloc(sizeof(char));
+  double tmp;
   sprintf(character, "%c", fgetc(fh));
   while (*character != 58) {
     strcat(str, character);
@@ -94,11 +100,7 @@ void parse_color(FILE *fh, Object *obj) {
   }
   skip_non_alphanum(fh);
   if (strcmp(str, "color") == 0) {
-    fscanf(fh, "%lf", &obj->color.r);
-    fgetc(fh);
-    fscanf(fh, "%lf", &obj->color.g);
-    fgetc(fh);
-    fscanf(fh, "%lf", &obj->color.b);
+    fscanf(fh, "%lf, %lf, %lf", &obj->color.r, &obj->color.g, &obj->color.b);
   }
   skip_non_alphanum(fh);
 }
@@ -241,37 +243,17 @@ void intersection_sphere(Vector3 *Rd, Vector3 *Ro, double Cx, double Cy, double 
   double b, c, t0, t1, x, y, z;
   b = 2 * ((Rd->x * (Ro->x - Cx)) + (Rd->y * (Ro->y - Cy)) + (Rd->z * (Ro->z - Cz)));
   c = ((Ro->x - Cx) * (Ro->x - Cx)) + ((Ro->y - Cy) * (Ro->y - Cy)) + ((Ro->z - Cz) * (Ro->z - Cz)) - (radius * radius);
-  t0 = -b + (sqrt((b * b) - (4 * c)) / 2);
-  t1 = -b - (sqrt((b * b) - (4 * c)) / 2);
-  //printf("t0: %lf\nt1: %lf\n", t0, t1);
-  if (!isnan(t0) && !isnan(t1)) {
-    if (t0 >= 0 && t1 >= 0) {
-      if (t0 < t1) {
-        v3dm_scale(Rd, t0, result);
-        v3dm_add(Ro, result, result);
-        v3dm_assign(x, y, z, result);
-      } else if (t1 < t0) {
-        v3dm_scale(Rd, t1, result);
-        v3dm_add(Ro, result, result);
-      }
+  t0 = -b - (sqrt((b * b) - (4 * c)) / 2);
+  if (!isnan(t0) && t0 > 0) {
+    v3dm_scale(Rd, t0, result);
+    v3dm_add(Ro, result, result);
+  } else if (isnan(t0) || t0 < 0) {
+    t1 = -b + (sqrt((b * b) - (4 * c)) / 2);
+    if (isnan(t1)) {
+      v3dm_assign(NAN, NAN, NAN, result);
     } else {
-      if (t1 < 0) {
-        v3dm_scale(Rd, t0, result);
-        v3dm_add(Ro, result, result);
-      } else if (t0 < 0) {
-        v3dm_scale(Rd, t1, result);
-        v3dm_add(Ro, result, result);
-      }
-    }
-  } else {
-    if (isnan(t0) && !isnan(t1)) {
       v3dm_scale(Rd, t1, result);
       v3dm_add(Ro, result, result);
-    } else if (isnan(t1) && !isnan(t0)) {
-      v3dm_scale(Rd, t0, result);
-      v3dm_add(Ro, result, result);
-    } else {
-      v3dm_assign(NAN, NAN, NAN, result);
     }
   }
 }
@@ -295,38 +277,39 @@ void intersection_plane(Vector3 *Ro, Vector3 *Rd, struct Vector3 norm, struct Ve
   v3dm_assign(NAN, NAN, NAN, result);
 }
 
-Color* castARay(Object *object, Vector3 *Ro, Vector3 *Rd, Color *closest_color, double closest_intersection) {
-  //TODO: FIX COLOR RETURN ERRORS
+Color* castARay_non(Object *object, Vector3 *Ro, Vector3 *Rd) {
+  //TODO: ONLY TOP LEFT CORNER ISN'T ALL ZEROES. WHAT THE ACTUAL FUCK.
   Vector3 *intersection;
-  double distance;
+  double closest_distance, distance;
+  closest_distance = NAN;
   Color *color;
+  color = malloc(sizeof(Color));
+  color->r = 0.0;
+  color->g = 0.0;
+  color->b = 0.0;
   intersection = malloc(sizeof(Vector3));
   v3dm_assign(NAN, NAN, NAN, intersection);
-  if (object->kind != NULL) {
-    if (strcmp(object->kind, "SPHERE") == 0) {
-      intersection_sphere(Rd, Ro, object->position.x, object->position.y, object->position.z, object->radius, intersection);
-    } else if (strcmp(object->kind, "PLANE") == 0) {
-      intersection_plane(Ro, Rd, object->normal, object->position, intersection);
-    } else if (strcmp(object->kind, "CAMERA") == 0) {
-      castARay(object->next, Ro, Rd, closest_color, closest_intersection);
-    }
-    if (!isnan(intersection->x)) {
-      distance = v3dm_pointToPointDistance(Ro, intersection);
-      if (isnan(closest_intersection)) {
-        //printf("R: %lf G: %lf B: %lf\n", object->color.r, object->color.g, object->color.b);
-        castARay(object->next, Ro, Rd, &object->color, distance);
-      } else  if (distance < closest_intersection) {
-        //printf("R: %lf G: %lf B: %lf\n", object->color.r, object->color.g, object->color.b);
-        castARay(object->next, Ro, Rd, &object->color, distance);
-      } else {
-        castARay(object->next, Ro, Rd, closest_color, closest_intersection);
+  for (int i = 0; object->kind != NULL; i++) {
+    if (strcmp(object->kind, "CAMERA") != 0) {
+      if (strcmp(object->kind, "SPHERE") == 0) {
+        intersection_sphere(Rd, Ro, object->position.x, object->position.y, object->position.z, object->radius, intersection);
+      } else if (strcmp(object->kind, "PLANE") == 0) {
+        intersection_plane(Ro, Rd, object->normal, object->position, intersection);
       }
-    } else {
-      castARay(object->next, Ro, Rd, closest_color, closest_intersection);
+      if (!isnan(intersection->x)) {
+        distance = v3dm_pointToPointDistance(Ro, intersection);
+        if (isnan(closest_distance)) {
+          closest_distance = distance;
+          color = &object->color;
+        } else  if (distance < closest_distance) {
+          closest_distance = distance;
+          color = &object->color;
+        }
+      }
     }
-  } else {
-    return closest_color;
+    object = object->next;
   }
+  return color;
 }
 
 int* render(double width, double height, double xRes, double yRes, Object *object) {
@@ -348,15 +331,16 @@ int* render(double width, double height, double xRes, double yRes, Object *objec
       y = -(height/2) + (j * (height/yRes)) + (0.5 * (width/yRes));
       v3dm_assign(x, y, -1, Pij);
       v3dm_add(Pij, Ro, Rd);
-      color->r = 0;
-      color->g = 0;
-      color->b = 0;
-      color = castARay(object, Ro, Rd, color, NAN);
-      colors[counter] = color->r * 255;
+      color->r = 0.0;
+      color->g = 0.0;
+      color->b = 0.0;
+      color = castARay_non(object, Ro, Rd);
+      //print_color(color);
+      colors[counter] = (int) color->r * 255;
       counter += (int) sizeof(int);
-      colors[counter] = color->g * 255;
+      colors[counter] = (int) color->g * 255;
       counter += (int) sizeof(int);
-      colors[counter] = color->b * 255;
+      colors[counter] = (int) color->b * 255;
       counter += (int) sizeof(int);
     }
   }
@@ -404,7 +388,7 @@ int main(int argc, char const *argv[]) {
 
   //rendering image
   printf("start rendering\n");
-  colors = malloc(sizeof(xRes * yRes * sizeof(double) * 3));
+  colors = malloc(xRes * yRes * sizeof(double) * 3);
   colors = render(width, height, xRes, yRes, result_object);
   printf("rendered\n");
   rewind_linked_object_list(object);
@@ -414,7 +398,7 @@ int main(int argc, char const *argv[]) {
   fprintf(output_file, "%s%d\n%s\n%d\n%d\n%d\n", "P", 3, "#superfluous comment", (int) xRes, (int) yRes, 255);
 
   //writing to image file
-  write_to_file(output_file, colors);
+  fwrite(colors, sizeof(int), xRes * yRes * sizeof(int) * 3, output_file);
   fclose(output_file);
 
   return 0;
