@@ -170,16 +170,6 @@ void skip_non_alphanum(FILE *fh){
   ungetc(character, fh);
 }
 
-//multiplies z of object by -1 in order to align it with program's coordinate space recursively
-void negatize_z(Object *object) {
-  if (object->kind != NULL) {
-    if (strcmp(object->kind, "CAMERA") != 0) {
-      object->position.z = -1 * object->position.z;
-    }
-    negatize_z(object->next);
-  }
-}
-
 //rewinds linked list and returns first object in list recursively
 Object* rewind_linked_object_list(Object *object) {
   if (object->prev != NULL) {
@@ -194,7 +184,7 @@ double get_width(Object *object) {
   if (strcmp(object->kind, "CAMERA") == 0) {
     return object->width;
   } else if (object->next == NULL) {
-    perror("Error: No camera found in input file. Please use an input file containing a camera object.")
+    perror("Error: No camera found in input file. Please use an input file containing a camera object.");
     exit(EXIT_FAILURE);
   } else {
     get_width(object->next);
@@ -206,7 +196,7 @@ double get_height(Object *object) {
   if (strcmp(object->kind, "CAMERA") == 0) {
     return object->height;
   } else if (object->next == NULL) {
-    perror("Error: No camera found in input file. Please use an input file containing a camera object.")
+    perror("Error: No camera found in input file. Please use an input file containing a camera object.");
     exit(EXIT_FAILURE);
   } else {
     get_height(object->next);
@@ -242,21 +232,31 @@ void print_v3(Vector3 *a) {
 //calculates sphere intersections and returns closest one that is in front of the camera
 void intersection_sphere(Vector3 *Rd, Vector3 *Ro, double Cx, double Cy, double Cz, double radius, Vector3 *result) {
   double b, c, t0, t1, x, y, z;
-  b = 2 * ((Rd->x * (Ro->x - Cx)) + (Rd->y * (Ro->y - Cy)) + (Rd->z * (Ro->z - Cz)));
-  c = ((Ro->x - Cx) * (Ro->x - Cx)) + ((Ro->y - Cy) * (Ro->y - Cy)) + ((Ro->z - Cz) * (Ro->z - Cz)) - (radius * radius);
-  t0 = -b - (sqrt((b * b) - (4 * c)) / 2);
-  //printf("%lf\n", t0);
-  if (!isnan(t0) && t0 > 0) {
-    v3dm_scale(Rd, t0, result);
-    v3dm_add(Ro, result, result);
-  } else if (isnan(t0) || t0 < 0) {
-    t1 = -b + (sqrt((b * b) - (4 * c)) / 2);
-    if (isnan(t1) || t1 < 0) {
-      v3dm_assign(NAN, NAN, NAN, result);
-    } else {
-      v3dm_scale(Rd, t1, result);
+  Vector3 *subtracted = malloc(sizeof(Vector3));
+  v3dm_assign(Cx, Cy, Cz, subtracted);
+  v3dm_subtract(Ro, subtracted, subtracted);
+  b = 2 * ((Rd->x * subtracted->x) + (Rd->y * subtracted->y) + (Rd->z * subtracted->z));
+  c = (subtracted->x * subtracted->x) + (subtracted->y * subtracted->y) + (subtracted->z * subtracted->z) - (radius * radius);
+  t0 = (-b - (sqrt((b*b) - (4*c))))/2;
+  t1 =(-b + (sqrt((b*b) - (4*c))))/2;
+  if (!isnan(t0) && !isnan(t1) && !isinf(t0) && !isinf(t1)) {
+    if (t0 <= 0 && t1 <= 0) {
+      if (t0 > t1) {
+        v3dm_scale(Rd, t0, result);
+        v3dm_add(Ro, result, result);
+      } else if (t1 >= t0) {
+        v3dm_scale(Rd, t1, result);
+        v3dm_add(Ro, result, result);
+      }
+    } else if (t1 > 0) {
+      v3dm_scale(Rd, t0, result);
+      v3dm_add(Ro, result, result);
+    } else if (t0 > 0) {
+      v3dm_scale(Rd, t0, result);
       v3dm_add(Ro, result, result);
     }
+  } else {
+    v3dm_assign(NAN, NAN, NAN, result);
   }
 }
 
@@ -292,6 +292,7 @@ Color* castARay_non(Object *object, Vector3 *Ro, Vector3 *Rd) {
     if (strcmp(object->kind, "CAMERA") != 0) {
       if (strcmp(object->kind, "SPHERE") == 0) {
         intersection_sphere(Rd, Ro, object->position.x, object->position.y, object->position.z, object->radius, intersection);
+
       } else if (strcmp(object->kind, "PLANE") == 0) {
         intersection_plane(Ro, Rd, object->normal, object->position, intersection);
       }
@@ -432,7 +433,6 @@ int main(int argc, char const *argv[]) {
 
   //rewinding linked list to be reused
   result_object = rewind_linked_object_list(result_object);
-  negatize_z(result_object);
 
   //allocating memory for array to accept all color values
   colors = malloc(xRes * yRes * sizeof(double) * 3);
@@ -445,6 +445,6 @@ int main(int argc, char const *argv[]) {
   //writing to image file
   write_to_file(output_file, colors, xRes, yRes);
   fclose(output_file);
-
+  
   return 0;
 }
