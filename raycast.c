@@ -194,7 +194,8 @@ double get_width(Object *object) {
   if (strcmp(object->kind, "CAMERA") == 0) {
     return object->width;
   } else if (object->next == NULL) {
-    //TODO: ERROR HERE FOR NO CAMERA OBJECT IN LINKED LIST
+    perror("Error: No camera found in input file. Please use an input file containing a camera object.")
+    exit(EXIT_FAILURE);
   } else {
     get_width(object->next);
   }
@@ -205,7 +206,8 @@ double get_height(Object *object) {
   if (strcmp(object->kind, "CAMERA") == 0) {
     return object->height;
   } else if (object->next == NULL) {
-    //TODO: ERROR HERE FOR NO CAMERA OBJECT IN LINKED LIST
+    perror("Error: No camera found in input file. Please use an input file containing a camera object.")
+    exit(EXIT_FAILURE);
   } else {
     get_height(object->next);
   }
@@ -219,7 +221,7 @@ double argv_to_double(char const *str, int index, double result) {
     double updated_result = result;
     char character = str[index];
     if (character > 57 || character < 48) {
-      perror("Width and height must be numeric values only. Please retry with different width and height inputs.");
+      perror("Error: Width and height must be numeric values only. Please retry with different width and height inputs.");
       exit(EXIT_FAILURE);
     }
 
@@ -280,7 +282,6 @@ void intersection_plane(Vector3 *Ro, Vector3 *Rd, struct Vector3 norm, struct Ve
 
 //returns color of closest object in front of the camera, or black if no object is closest in front of the camera
 Color* castARay_non(Object *object, Vector3 *Ro, Vector3 *Rd) {
-  //TODO: Color is broken after first one for some reason
   Vector3 *intersection;
   double closest_distance, distance;
   closest_distance = NAN;
@@ -380,22 +381,22 @@ int main(int argc, char const *argv[]) {
 
   //initial checks
   if (argc != 5) {
-    perror("This program requires 4 arguments. Please retry with the correct number of arguments");
+    perror("Error: This program requires 4 arguments. Please retry with the correct number of arguments");
     exit(EXIT_FAILURE);
   }
 
   if (!fopen(argv[3], "r")) {
-    perror("Please select a different input file, as this one does not exist.");
+    perror("Error: Please select a different input file, as this one does not exist.");
     exit(EXIT_FAILURE);
   }
 
   if (checkExtension(test_str, ".csv") == -1) {
-    perror("Please choose a new input file with a .csv extension.");
+    perror("Error: Please choose a new input file with a .csv extension.");
     exit(EXIT_FAILURE);
   }
   test_str = argv[4];
   if (checkExtension(test_str, ".ppm") == -1) {
-    perror("Please choose a new output file with a .ppm extension.");
+    perror("Error: Please choose a new output file with a .ppm extension.");
     exit(EXIT_FAILURE);
   }
 
