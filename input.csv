@@ -1,3 +1,6 @@
 camera, width: 0.5, height: 0.5
-sphere, color: [1.0, 0.0, 0.0], position: [-10, -10, 100], radius: 10
-plane, color: [0, 0, 1.0], position: [0, 0, 400], normal: [-11, -11, 1]
+sphere, color: [1.0, 0.0, 0.0], position: [-10, -10, 1000], radius: 200
+plane, color: [0, 0, 1.0], position: [40, 40, 400], normal: [-4, -10, 1]
+sphere, color: [0.0, 1.0, 0.8], position: [-100, -25, 1000], radius: 200
+plane, color: [0.2, 0.3, 0.5], position: [1, 10, 420], normal: [-4, -10, 0]
+sphere, color: [0.4, 0.32, 0.15], position: [50, 50, 400], radius: 100
