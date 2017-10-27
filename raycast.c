@@ -267,13 +267,21 @@ Object* parse_csv(FILE *fh, Object *object, char character) {
       parse_field(fh, object);
       parse_field(fh, object);
     } else if (strcmp(object->kind, "SPHERE") == 0) {
-      parse_color(fh, object);
-      parse_position(fh, object);
       parse_radius(fh, object);
-    } else if (strcmp(object->kind, "PLANE") == 0) {
+      parse_color(fh, object);
       parse_color(fh, object);
       parse_position(fh, object);
+    } else if (strcmp(object->kind, "PLANE") == 0) {
       parse_normal(fh, object);
+      parse_color(fh, object);
+      parse_position(fh, object);
+    } else if (strcmp(object->kind, "LIGHT") == 0) {
+      parse_color(fh, object);
+      parse_theta(fh, object);
+      parse_rad_a2(fh, object);
+      parse_rad_a1(fh, object);
+      parse_rad_a0(fh, object);
+      parse_position(fh, object);
     }
     skip_non_alphanum(fh);
     object_next->prev = object;
