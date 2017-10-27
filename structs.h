@@ -10,12 +10,17 @@ typedef struct Object {
   double radius, width, height;
   struct Vector3 position, normal;
   struct Object *prev, *next;
-  struct Color color;
+  struct Color diffuse_color, specular_color;
+  struct Radial radial;
 } Object;
 
 typedef struct Pixel {
   struct Color color;
   struct Pixel *next, *prev;
 } Pixel;
+
+typedef struct Radial {
+  int a0, a1, a2;
+} Radial;
 
 #endif
