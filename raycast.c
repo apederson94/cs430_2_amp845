@@ -1,4 +1,4 @@
-specular_color#include "v3dm_lib.h"
+#include "v3dm_lib.h"
 #include "structs.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -65,7 +65,7 @@ void parse_field(FILE *fh, Object *obj) {
     fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]\n", tmp);
     check = check_str(fh, tmp);
     if (check == 1) {
-      fscanf(fh, "%lf", &obj->width)
+      fscanf(fh, "%lf", &obj->width);
       if (obj->width < 0.0) {
         perror("Error: Camera width must be a positive value. Please try again with a positive width.");
       }
@@ -346,6 +346,8 @@ void parse_theta(FILE *fh, Object *obj) {
       perror("Error: Theta values must be of nuermic format. Please try again with numeric values.");
       exit(EXIT_FAILURE);
     }
+  } else {
+    rewind_file(fh, str);
   }
   free(tmp);
   skip_non_alphanum(fh);
@@ -365,7 +367,7 @@ void parse_radial(FILE *fh, Object *obj) {
   skip_non_alphanum(fh);
 
   if (strcmp(str, "radial-a2") == 0) {
-    tmp = fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
+    fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
     check = check_str(fh, tmp);
     if (check == 1) {
       fscanf(fh, "%lf", &obj->radial.a2);
@@ -374,7 +376,7 @@ void parse_radial(FILE *fh, Object *obj) {
       exit(EXIT_FAILURE);
     }
   } else if (strcmp(str, "radial-a1") == 0) {
-    tmp = fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
+    fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
     check = check_str(fh, tmp);
     if (check == 1) {
       fscanf(fh, "%lf", &obj->radial.a1);
@@ -383,7 +385,7 @@ void parse_radial(FILE *fh, Object *obj) {
       exit(EXIT_FAILURE);
     }
   } else if (strcmp(str, "radial-a0") == 0) {
-    tmp = fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
+    fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
     check = check_str(fh, tmp);
     if (check == 1) {
       fscanf(fh, "%lf", &obj->radial.a0);
@@ -458,9 +460,9 @@ Object* parse_csv(FILE *fh, Object *object, char character) {
     } else if (strcmp(object->kind, "LIGHT") == 0) {
       parse_color(fh, object);
       parse_theta(fh, object);
-      parse_rad_a2(fh, object);
-      parse_rad_a1(fh, object);
-      parse_rad_a0(fh, object);
+      parse_radial(fh, object);
+      parse_radial(fh, object);
+      parse_radial(fh, object);
       parse_position(fh, object);
     }
     skip_non_alphanum(fh);
@@ -640,7 +642,7 @@ int* render(double width, double height, double xRes, double yRes, Object *objec
   int *colors;
   Vector3 *Pij, *Rd, *Ro;
   Color *color;
-  Ro = malloc(sizeof(Vector3));
+  Ro = malloc(sizeof(struct Vector3));
   Pij = malloc(sizeof(Vector3));
   Rd = malloc(sizeof(Vector3));
   color = malloc(sizeof(Color));
