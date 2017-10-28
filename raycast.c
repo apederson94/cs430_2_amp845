@@ -172,13 +172,13 @@ void parse_color(FILE *fh, Object *obj) {
   char *character = malloc(sizeof(char));
   char *tmp = malloc(100);
   int check = 0;
-  sprintf(character, "%c", fgetc(fh));
   while (*character != 58) {
-    strcat(str, character);
     sprintf(character, "%c", fgetc(fh));
+    strcat(str, character);
   }
-  skip_non_alphanum(fh);
-  if (strcmp(str, "color") == 0) {
+
+  if (strcmp(str, "color:") == 0) {
+    skip_non_alphanum(fh);
     fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
     check = check_str(fh, tmp);
     if (check == 1) {
@@ -226,7 +226,8 @@ void parse_color(FILE *fh, Object *obj) {
       perror("Error: Color values must be of numeric format. Please retry with numeric values.");
       exit(EXIT_FAILURE);
     }
-  } else if (strcmp(str, "diffuse_color") == 0) {
+  } else if (strcmp(str, "diffuse_color:") == 0) {
+    skip_non_alphanum(fh);
     fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
     check = check_str(fh, tmp);
     if (check == 1) {
@@ -275,7 +276,8 @@ void parse_color(FILE *fh, Object *obj) {
       perror("Error: diffuse_color values must be of numeric format. Please retry with numeric values.");
       exit(EXIT_FAILURE);
     }
-  } else if (strcmp(str, "specular_color") == 0) {
+  } else if (strcmp(str, "specular_color:") == 0) {
+    skip_non_alphanum(fh);
     fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
     check = check_str(fh, tmp);
     if (check == 1) {
@@ -351,6 +353,7 @@ void parse_theta(FILE *fh, Object *obj) {
       exit(EXIT_FAILURE);
     }
   } else {
+    obj->theta = 0;
     rewind_file(fh, str);
   }
   skip_non_alphanum(fh);
@@ -422,6 +425,7 @@ void parse_normal(FILE *fh, Object *obj) {
       exit(EXIT_FAILURE);
     }
 
+    skip_non_alphanum(fh);
     fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
     check = check_str(fh, tmp);
     if (check == 1) {
@@ -431,6 +435,7 @@ void parse_normal(FILE *fh, Object *obj) {
       exit(EXIT_FAILURE);
     }
 
+    skip_non_alphanum(fh);
     fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
     check = check_str(fh, tmp);
     if (check == 1) {
@@ -468,6 +473,8 @@ Object* parse_csv(FILE *fh, Object *object, char character) {
       parse_color(fh, object);
       parse_color(fh, object);
       parse_position(fh, object);
+      printf("%lf, %lf, %lf\n%lf, %lf, %lf\n", object->normal.x, object->normal.y, object->normal.z, object->diffuse_color.r, object->diffuse_color.g, object->diffuse_color.b);
+      printf("%lf, %lf, %lf\n", object->position.x, object->position.y, object->position.z);
     } else if (strcmp(object->kind, "LIGHT") == 0) {
       parse_color(fh, object);
       parse_theta(fh, object);
@@ -475,6 +482,8 @@ Object* parse_csv(FILE *fh, Object *object, char character) {
       parse_radial(fh, object);
       parse_radial(fh, object);
       parse_position(fh, object);
+      printf("%lf, %lf %lf\n", object->color.r, object->color.g, object->color.b);
+      printf("%lf\n%lf, %lf, %lf\n%lf, %lf, %lf\n", object->theta, object->radial.a2, object->radial.a1, object->radial.a0, object->position.x, object->position.y, object->position.z);
     }
     skip_non_alphanum(fh);
     object_next->prev = object;
