@@ -16,7 +16,7 @@ void parse_type(FILE *fh, Object *obj) {
   char *character = malloc(sizeof(char));
 
   sprintf(character, "%c", fgetc(fh));
-  while (*character != 44) {
+  while (*character != ',') {
     strcat(str, character);
     sprintf(character, "%c", fgetc(fh));
   }
@@ -26,6 +26,11 @@ void parse_type(FILE *fh, Object *obj) {
     obj->kind = "PLANE";
   } else if (strcmp(str, "camera") == 0) {
     obj->kind = "CAMERA";
+  } else if (strcmp(str, "light") == 0) {
+    obj->kind = "LIGHT";
+  } else {
+    perror("Error: Object must be of type camera, sphere, plane, or light. Please try again with only these types of objects.");
+    exit(EXIT_FAILURE);
   }
   skip_non_alphanum(fh);
 }
@@ -42,18 +47,15 @@ int check_str(FILE *fh, char *str) {
       return 0;
     }
   }
-  rewind_file(fh, str);
+  //rewind_file(fh, str);
   return 1;
 }
-
-
 
 //parses width and height fields from csv
 void parse_field(FILE *fh, Object *obj) {
   char *str = (char *) malloc(sizeof(char) * 9);
   char *character = malloc(sizeof(char));
   char *tmp = malloc(100);
-  double *result = malloc(100);
   int check = 0;
   sprintf(character, "%c", fgetc(fh));
   while (*character != 58) {
@@ -65,9 +67,9 @@ void parse_field(FILE *fh, Object *obj) {
     fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]\n", tmp);
     check = check_str(fh, tmp);
     if (check == 1) {
-      fscanf(fh, "%lf", &obj->width);
-      if (obj->width < 0.0) {
-        perror("Error: Camera width must be a positive value. Please try again with a positive width.");
+      sscanf(tmp, "%lf", &obj->width);
+      if (obj->width <= 0.0) {
+        perror("Error: Camera width must be greater than zero. Please try again with value greater than zero.");
       }
     } else {
       perror("Error: Camera width must be a numeric value. Please try again with a numeric value.");
@@ -77,16 +79,15 @@ void parse_field(FILE *fh, Object *obj) {
     fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]\n", tmp);
     check = check_str(fh, tmp);
     if (check == 1) {
-      fscanf(fh, "%lf", &obj->height);
-      if (obj->height < 0.0) {
-        perror("Error: Camera height must be a positive value. Please try again with a positive height.");
+      sscanf(tmp, "%lf", &obj->height);
+      if (obj->height <= 0.0) {
+        perror("Error: Camera height must be greater than zero. Please try again with a value greater than zero.");
       }
     } else {
       perror("Error: Camera height must be a numeric value. Please try again with a numeric value.");
       exit(EXIT_FAILURE);
     }
   }
-  free(tmp);
   skip_non_alphanum(fh);
 }
 
@@ -106,7 +107,7 @@ void parse_radius(FILE *fh, Object *obj) {
     fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
     check = check_str(fh, tmp);
     if (check == 1) {
-      fscanf(fh, "%lf", &obj->radius);
+      sscanf(tmp, "%lf", &obj->radius);
       if (obj->radius < 0) {
         perror("Error: Sphere radius must be a positive value. Please try again with a positive radius.");
       }
@@ -116,7 +117,6 @@ void parse_radius(FILE *fh, Object *obj) {
     }
 
   }
-  free(tmp);
   skip_non_alphanum(fh);
 }
 
@@ -136,7 +136,7 @@ void parse_position(FILE *fh, Object *obj) {
     fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
     check = check_str(fh, tmp);
     if (check == 1) {
-      fscanf(fh, "%lf", &obj->position.x);
+      sscanf(tmp, "%lf", &obj->position.x);
       skip_non_alphanum(fh);
     } else {
       perror("Error: All x positions must be in numeric format. Please retry with numeric values.");
@@ -146,7 +146,7 @@ void parse_position(FILE *fh, Object *obj) {
     fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
     check = check_str(fh, tmp);
     if (check == 1) {
-      fscanf(fh, "%lf", &obj->position.y);
+      sscanf(tmp, "%lf", &obj->position.y);
       skip_non_alphanum(fh);
     } else {
       perror("Error: All y positions must be in numeric format. Please retry with numeric values.");
@@ -156,15 +156,13 @@ void parse_position(FILE *fh, Object *obj) {
     fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
     check = check_str(fh, tmp);
     if (check == 1) {
-      fscanf(fh, "%lf", &obj->position.z);
+      sscanf(tmp, "%lf", &obj->position.z);
       skip_non_alphanum(fh);
     } else {
       perror("Error: All z positions must be in numeric format. Please retry with numeric values.");
       exit(EXIT_FAILURE);
     }
-    fscanf(fh, "%lf", &obj->position.z);
   }
-  free(tmp);
   skip_non_alphanum(fh);
 }
 
@@ -184,7 +182,7 @@ void parse_color(FILE *fh, Object *obj) {
     fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
     check = check_str(fh, tmp);
     if (check == 1) {
-      fscanf(fh, "%lf", &obj->color.r);
+      sscanf(tmp, "%lf", &obj->color.r);
       if (obj->color.r < 0.0 || obj->color.r > 1.0) {
         perror("Error: Color values may only range from 0.0 to 1.0. Please retry with correct color values.");
         exit(EXIT_FAILURE);
@@ -200,7 +198,7 @@ void parse_color(FILE *fh, Object *obj) {
     fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
     check = check_str(fh, tmp);
     if (check == 1) {
-      fscanf(fh, "%lf", &obj->color.g);
+      sscanf(tmp, "%lf", &obj->color.g);
       if (obj->color.g < 0.0 || obj->color.g > 1.0) {
         perror("Error: Color values may only range from 0.0 to 1.0. Please retry with the correct color values.");
         exit(EXIT_FAILURE);
@@ -216,12 +214,13 @@ void parse_color(FILE *fh, Object *obj) {
     fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
     check = check_str(fh, tmp);
     if (check == 1) {
-      fscanf(fh, "%lf", &obj->color.b);
+      sscanf(tmp, "%lf", &obj->color.b);
       if (obj->color.b < 0.0 || obj->color.b > 1.0) {
         perror("Error: Color values may only range from 0.0 to 1.0. Please retry with the correct color values.");
         exit(EXIT_FAILURE);
       } else {
         obj->color.b *= 255;
+        skip_non_alphanum(fh);
       }
     } else {
       perror("Error: Color values must be of numeric format. Please retry with numeric values.");
@@ -231,7 +230,8 @@ void parse_color(FILE *fh, Object *obj) {
     fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
     check = check_str(fh, tmp);
     if (check == 1) {
-      fscanf(fh, "%lf", &obj->diffuse_color.r);
+      sscanf(tmp, "%lf", &obj->diffuse_color.r);
+
       if (obj->diffuse_color.r < 0.0 || obj->diffuse_color.r > 1.0) {
         perror("Error: diffuse_color values may only range from 0.0 to 1.0. Please retry with correct diffuse_color values.");
         exit(EXIT_FAILURE);
@@ -247,7 +247,7 @@ void parse_color(FILE *fh, Object *obj) {
     fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
     check = check_str(fh, tmp);
     if (check == 1) {
-      fscanf(fh, "%lf", &obj->diffuse_color.g);
+      sscanf(tmp, "%lf", &obj->diffuse_color.g);
       if (obj->diffuse_color.g < 0.0 || obj->diffuse_color.g > 1.0) {
         perror("Error: diffuse_color values may only range from 0.0 to 1.0. Please retry with the correct diffuse_color values.");
         exit(EXIT_FAILURE);
@@ -263,12 +263,13 @@ void parse_color(FILE *fh, Object *obj) {
     fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
     check = check_str(fh, tmp);
     if (check == 1) {
-      fscanf(fh, "%lf", &obj->diffuse_color.b);
+      sscanf(tmp, "%lf", &obj->diffuse_color.b);
       if (obj->diffuse_color.b < 0.0 || obj->diffuse_color.b > 1.0) {
         perror("Error: diffuse_color values may only range from 0.0 to 1.0. Please retry with the correct diffuse_color values.");
         exit(EXIT_FAILURE);
       } else {
         obj->diffuse_color.b *= 255;
+        skip_non_alphanum(fh);
       }
     } else {
       perror("Error: diffuse_color values must be of numeric format. Please retry with numeric values.");
@@ -278,7 +279,7 @@ void parse_color(FILE *fh, Object *obj) {
     fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
     check = check_str(fh, tmp);
     if (check == 1) {
-      fscanf(fh, "%lf", &obj->specular_color.r);
+      sscanf(tmp, "%lf", &obj->specular_color.r);
       if (obj->specular_color.r < 0.0 || obj->specular_color.r > 1.0) {
         perror("Error: specular_color values may only range from 0.0 to 1.0. Please retry with correct specular_color values.");
         exit(EXIT_FAILURE);
@@ -294,7 +295,7 @@ void parse_color(FILE *fh, Object *obj) {
     fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
     check = check_str(fh, tmp);
     if (check == 1) {
-      fscanf(fh, "%lf", &obj->specular_color.g);
+      sscanf(tmp, "%lf", &obj->specular_color.g);
       if (obj->specular_color.g < 0.0 || obj->specular_color.g > 1.0) {
         perror("Error: specular_color values may only range from 0.0 to 1.0. Please retry with the correct specular_color values.");
         exit(EXIT_FAILURE);
@@ -310,17 +311,20 @@ void parse_color(FILE *fh, Object *obj) {
     fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
     check = check_str(fh, tmp);
     if (check == 1) {
-      fscanf(fh, "%lf", &obj->specular_color.b);
+      sscanf(tmp, "%lf", &obj->specular_color.b);
       if (obj->specular_color.b < 0.0 || obj->specular_color.b > 1.0) {
         perror("Error: specular_color values may only range from 0.0 to 1.0. Please retry with the correct specular_color values.");
         exit(EXIT_FAILURE);
       } else {
         obj->specular_color.b *= 255;
+        skip_non_alphanum(fh);
       }
     } else {
       perror("Error: specular_color values must be of numeric format. Please retry with numeric values.");
       exit(EXIT_FAILURE);
     }
+  } else {
+    rewind_file(fh, str);
   }
   skip_non_alphanum(fh);
 }
@@ -341,7 +345,7 @@ void parse_theta(FILE *fh, Object *obj) {
     fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
     check = check_str(fh, tmp);
     if (check == 1) {
-      fscanf(fh, "%lf", &obj->theta);
+      sscanf(tmp, "%lf", &obj->theta);
     } else {
       perror("Error: Theta values must be of nuermic format. Please try again with numeric values.");
       exit(EXIT_FAILURE);
@@ -349,7 +353,6 @@ void parse_theta(FILE *fh, Object *obj) {
   } else {
     rewind_file(fh, str);
   }
-  free(tmp);
   skip_non_alphanum(fh);
 }
 
@@ -370,7 +373,7 @@ void parse_radial(FILE *fh, Object *obj) {
     fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
     check = check_str(fh, tmp);
     if (check == 1) {
-      fscanf(fh, "%lf", &obj->radial.a2);
+      sscanf(tmp, "%lf", &obj->radial.a2);
     } else {
       perror("Error: radial-a2 values must be of numeric format. Please try again with numeric values.");
       exit(EXIT_FAILURE);
@@ -379,7 +382,7 @@ void parse_radial(FILE *fh, Object *obj) {
     fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
     check = check_str(fh, tmp);
     if (check == 1) {
-      fscanf(fh, "%lf", &obj->radial.a1);
+      sscanf(tmp, "%lf", &obj->radial.a1);
     } else {
       perror("Error: radial-a1 values must be of numeric format. Please try again with numeric values.");
       exit(EXIT_FAILURE);
@@ -388,12 +391,13 @@ void parse_radial(FILE *fh, Object *obj) {
     fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
     check = check_str(fh, tmp);
     if (check == 1) {
-      fscanf(fh, "%lf", &obj->radial.a0);
+      sscanf(tmp, "%lf", &obj->radial.a0);
     } else {
       perror("Error: radial-a0 values must be of numeric format. Please try again with numeric values.");
       exit(EXIT_FAILURE);
     }
   }
+  skip_non_alphanum(fh);
 }
 
 //parses the normal vector from csv
@@ -412,7 +416,7 @@ void parse_normal(FILE *fh, Object *obj) {
     fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
     check = check_str(fh, tmp);
     if (check == 1) {
-      fscanf(fh, "%lf", &obj->normal.x);
+      sscanf(tmp, "%lf", &obj->normal.x);
     } else {
       perror("Error: Normal values must be of numeric type. Please try again with numeric values.");
       exit(EXIT_FAILURE);
@@ -421,7 +425,7 @@ void parse_normal(FILE *fh, Object *obj) {
     fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
     check = check_str(fh, tmp);
     if (check == 1) {
-      fscanf(fh, "%lf", &obj->normal.y);
+      sscanf(tmp, "%lf", &obj->normal.y);
     } else {
       perror("Error: Normal values must be of numeric type. Please try again with numeric values.");
       exit(EXIT_FAILURE);
@@ -430,13 +434,13 @@ void parse_normal(FILE *fh, Object *obj) {
     fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
     check = check_str(fh, tmp);
     if (check == 1) {
-      fscanf(fh, "%lf", &obj->normal.z);
+      sscanf(tmp, "%lf", &obj->normal.z);
     } else {
       perror("Error: Normal values must be of numeric type. Please try again with numeric values.");
       exit(EXIT_FAILURE);
     }
-    //fscanf(fh, "%lf, %lf, %lf", &obj->normal.x, &obj->normal.y, &obj->normal.z);
   }
+  skip_non_alphanum(fh);
 }
 
 //comprehensive parser that combines all parser helper functions
@@ -445,16 +449,23 @@ Object* parse_csv(FILE *fh, Object *object, char character) {
   if (character != EOF) {
     Object *object_next = malloc(sizeof(Object));
     parse_type(fh, object);
+    printf("%s\n", object->kind);
     if (strcmp(object->kind, "CAMERA") == 0) {
       parse_field(fh, object);
       parse_field(fh, object);
+      printf("%lf, %lf\n", object->width, object->height);
     } else if (strcmp(object->kind, "SPHERE") == 0) {
       parse_radius(fh, object);
       parse_color(fh, object);
       parse_color(fh, object);
+      parse_color(fh, object);
       parse_position(fh, object);
+      printf("%lf\n%lf, %lf, %lf\n", object->radius, object->diffuse_color.r, object->diffuse_color.g, object->diffuse_color.b);
+      printf("%lf, %lf, %lf\n%lf, %lf, %lf\n", object->specular_color.r, object->specular_color.g, object->specular_color.b, object->position.x, object->position.y, object->position.z);
     } else if (strcmp(object->kind, "PLANE") == 0) {
       parse_normal(fh, object);
+      parse_color(fh, object);
+      parse_color(fh, object);
       parse_color(fh, object);
       parse_position(fh, object);
     } else if (strcmp(object->kind, "LIGHT") == 0) {
@@ -767,6 +778,7 @@ int main(int argc, char const *argv[]) {
   //writing to image file
   write_to_file(output_file, colors, xRes, yRes);
   fclose(output_file);
+  //(output_file);
 
   return 0;
 }
