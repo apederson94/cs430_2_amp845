@@ -24,6 +24,7 @@ typedef struct Pixel {
 } Pixel;
 
 typedef struct Light {
+  char *kind;
   struct Vector3 position, direction;
   struct Color color;
   struct Radial radial;
