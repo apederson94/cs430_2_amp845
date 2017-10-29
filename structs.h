@@ -23,4 +23,12 @@ typedef struct Pixel {
   struct Pixel *next, *prev;
 } Pixel;
 
+typedef struct Light {
+  struct Vector3 position, direction;
+  struct Color color;
+  struct Radial radial;
+  double theta, angular;
+  struct Light *prev, *next;
+} Light;
+
 #endif

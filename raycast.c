@@ -708,6 +708,36 @@ int checkExtension(char *fileName, char *extension) {
   }
 }
 
+//finds all lights, classifies them, and then returns a linked list of lights recursively
+Light* find_lights(Object *obj, Light *light) {
+  Light *new_light = malloc(sizeof())
+  if (strcmp(obj->kind, "LIGHT")) {
+    new_light->position = obj->position;
+    new_light->direction = obj->direction;
+    new_light->color = obj->color;
+    new_light->radial = obj->radial;
+    new_light->theta = obj->theta;
+    new_light->angular = obj->angular;
+    light->next = new_light;
+    new_light->prev = light;
+    if (new_light->theta == NULL || new_light->theta == 0) {
+      new_light->kind = "POINT";
+    } else if (angular != 0) {
+      new_light->kind = "SPOT";
+    }
+    if (obj->next == NULL) {
+      return new_light;
+    }
+  } else if (obj->next == NULL && light->kind == NULL) {
+    perror("Error: No lighting data found in input file. Please try again with a light source in the input file.");
+    exit(EXIT_FAILURE);
+  } else if (obj->next == NULL && light->kind != NULL) {
+    return light;
+  } else {
+    find_lights(obj->next, light);
+  }
+}
+
 //MARK: -MAIN FUNCTION
 int main(int argc, char const *argv[]) {
   //initial check variables
