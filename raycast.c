@@ -183,10 +183,13 @@ void parse_color(FILE *fh, Object *obj) {
     check = check_str(fh, tmp);
     if (check == 1) {
       sscanf(tmp, "%lf", &obj->color.r);
-      if (obj->color.r < 0.0 || obj->color.r > 1.0) {
-        perror("Error: Color values may only range from 0.0 to 1.0. Please retry with correct color values.");
+      if (obj->color.r < 0.0) {
+        perror("Error: Color values must be greater than 0.0. Please retry with correct color values.");
         exit(EXIT_FAILURE);
       } else {
+        if (obj->color.r > 1.0) {
+          obj->color.r = 1.0;
+        }
         obj->color.r *= 255;
         skip_non_alphanum(fh);
       }
@@ -199,10 +202,13 @@ void parse_color(FILE *fh, Object *obj) {
     check = check_str(fh, tmp);
     if (check == 1) {
       sscanf(tmp, "%lf", &obj->color.g);
-      if (obj->color.g < 0.0 || obj->color.g > 1.0) {
+      if (obj->color.g < 0.0) {
         perror("Error: Color values may only range from 0.0 to 1.0. Please retry with the correct color values.");
         exit(EXIT_FAILURE);
       } else {
+        if (obj->color.g > 1.0) {
+          obj->color.g = 1.0;
+        }
         obj->color.g *= 255;
         skip_non_alphanum(fh);
       }
@@ -215,10 +221,13 @@ void parse_color(FILE *fh, Object *obj) {
     check = check_str(fh, tmp);
     if (check == 1) {
       sscanf(tmp, "%lf", &obj->color.b);
-      if (obj->color.b < 0.0 || obj->color.b > 1.0) {
+      if (obj->color.b < 0.0) {
         perror("Error: Color values may only range from 0.0 to 1.0. Please retry with the correct color values.");
         exit(EXIT_FAILURE);
       } else {
+        if (obj->color.b > 1.0) {
+          obj->color.b = 1.0;
+        }
         obj->color.b *= 255;
         skip_non_alphanum(fh);
       }
@@ -233,10 +242,13 @@ void parse_color(FILE *fh, Object *obj) {
     if (check == 1) {
       sscanf(tmp, "%lf", &obj->diffuse_color.r);
 
-      if (obj->diffuse_color.r < 0.0 || obj->diffuse_color.r > 1.0) {
+      if (obj->diffuse_color.r < 0.0) {
         perror("Error: diffuse_color values may only range from 0.0 to 1.0. Please retry with correct diffuse_color values.");
         exit(EXIT_FAILURE);
       } else {
+        if (obj->diffuse_color.r > 1.0) {
+          obj->diffuse_color.r = 1.0;
+        }
         obj->diffuse_color.r *= 255;
         skip_non_alphanum(fh);
       }
@@ -249,10 +261,13 @@ void parse_color(FILE *fh, Object *obj) {
     check = check_str(fh, tmp);
     if (check == 1) {
       sscanf(tmp, "%lf", &obj->diffuse_color.g);
-      if (obj->diffuse_color.g < 0.0 || obj->diffuse_color.g > 1.0) {
+      if (obj->diffuse_color.g < 0.0) {
         perror("Error: diffuse_color values may only range from 0.0 to 1.0. Please retry with the correct diffuse_color values.");
         exit(EXIT_FAILURE);
       } else {
+        if (obj->diffuse_color.g > 1.0) {
+          obj->diffuse_color.g = 1.0;
+        }
         obj->diffuse_color.g *= 255;
         skip_non_alphanum(fh);
       }
@@ -265,10 +280,13 @@ void parse_color(FILE *fh, Object *obj) {
     check = check_str(fh, tmp);
     if (check == 1) {
       sscanf(tmp, "%lf", &obj->diffuse_color.b);
-      if (obj->diffuse_color.b < 0.0 || obj->diffuse_color.b > 1.0) {
+      if (obj->diffuse_color.b < 0.0) {
         perror("Error: diffuse_color values may only range from 0.0 to 1.0. Please retry with the correct diffuse_color values.");
         exit(EXIT_FAILURE);
       } else {
+        if (obj->diffuse_color.b > 1.0) {
+          obj->diffuse_color.b = 1.0;
+        }
         obj->diffuse_color.b *= 255;
         skip_non_alphanum(fh);
       }
@@ -282,10 +300,13 @@ void parse_color(FILE *fh, Object *obj) {
     check = check_str(fh, tmp);
     if (check == 1) {
       sscanf(tmp, "%lf", &obj->specular_color.r);
-      if (obj->specular_color.r < 0.0 || obj->specular_color.r > 1.0) {
+      if (obj->specular_color.r < 0.0) {
         perror("Error: specular_color values may only range from 0.0 to 1.0. Please retry with correct specular_color values.");
         exit(EXIT_FAILURE);
       } else {
+        if (obj->specular_color.r > 1.0) {
+          obj->specular_color.r = 1.0;
+        }
         obj->specular_color.r *= 255;
         skip_non_alphanum(fh);
       }
@@ -298,10 +319,13 @@ void parse_color(FILE *fh, Object *obj) {
     check = check_str(fh, tmp);
     if (check == 1) {
       sscanf(tmp, "%lf", &obj->specular_color.g);
-      if (obj->specular_color.g < 0.0 || obj->specular_color.g > 1.0) {
+      if (obj->specular_color.g < 0.0) {
         perror("Error: specular_color values may only range from 0.0 to 1.0. Please retry with the correct specular_color values.");
         exit(EXIT_FAILURE);
       } else {
+        if (obj->specular_color.g > 1.0) {
+          obj->specular_color.g = 1.0;
+        }
         obj->specular_color.g *= 255;
         skip_non_alphanum(fh);
       }
@@ -314,10 +338,13 @@ void parse_color(FILE *fh, Object *obj) {
     check = check_str(fh, tmp);
     if (check == 1) {
       sscanf(tmp, "%lf", &obj->specular_color.b);
-      if (obj->specular_color.b < 0.0 || obj->specular_color.b > 1.0) {
+      if (obj->specular_color.b < 0.0) {
         perror("Error: specular_color values may only range from 0.0 to 1.0. Please retry with the correct specular_color values.");
         exit(EXIT_FAILURE);
       } else {
+        if (obj->specular_color.b > 1.0) {
+          obj->specular_color.b = 1.0;
+        }
         obj->specular_color.b *= 255;
         skip_non_alphanum(fh);
       }
@@ -623,11 +650,11 @@ void intersection_plane(Vector3 *Ro, Vector3 *Rd, struct Vector3 norm, struct Ve
   v3dm_assign(NAN, NAN, NAN, result);
 }
 
-//returns color of closest object in front of the camera, or black if no object is closest in front of the camera
-Color* castARay_non(Object *object, Vector3 *Ro, Vector3 *Rd) {
-  Vector3 *intersection;
+Vector3 castARay_primitive(Object *object, Vector3 Ro, Vector3 *Rd) {
+  Vector3 *intersection = malloc(sizeof(Vector3));
   double closest_distance, distance;
   closest_distance = NAN;
+  Vector3 closest_intersection = malloc(sizeof(Vector3));
   Color *color;
   intersection = malloc(sizeof(Vector3));
   v3dm_assign(NAN, NAN, NAN, intersection);
@@ -644,15 +671,66 @@ Color* castARay_non(Object *object, Vector3 *Ro, Vector3 *Rd) {
         distance = v3dm_pointToPointDistance(Ro, intersection);
         if (isnan(closest_distance)) {
           closest_distance = distance;
-          color = &object->color;
+          closest_intersection = intersection;
         } else  if (distance < closest_distance) {
           closest_distance = distance;
-          color = &object->color;
+          closest_intersection = intersection;
         }
       }
     }
     object = object->next;
   }
+  return intersection;
+}
+
+//returns color of closest object in front of the camera, or black if no object is closest in front of the camera
+Color* castARay(Object *object, Vector3 *Ro, Vector3 *Rd, Light *light) {
+  Vector3 *intersection = malloc(sizeof(Vector3));
+  Vector3 *hit = malloc(sizeof(Vector3));
+  Color final_color = malloc(sizeof(Color));
+  Vector3 *Ro2 = malloc(sizeof(Vector3));
+  Vector3 *Rd2 = mallco(sizeof(Vector3));
+
+
+  for (int i = 0; light != NULL; i++) {
+    Ro2 = castARay_primitive(object, Ro, Rd);
+    v3dm_subtract(light->position, intersection, Rd2);
+    v3dm_unit(Rd2, Rd2);
+    hit = castARay_primitive(object, Ro2, Rd2);
+    if (!isnan(hit->position.x)) continue; //light source is OFF
+    light = light->next;
+
+
+    //radial attenuation
+    double dl = v3dm_pointToPointDistance(light->position, intersection);
+    double f_rad = 1.0;
+    if (dl < INFINITY) {
+      f_rad = 1/(light->radial.a2 * dl * dl + light->radial.a1 * dl + light->radial.a0);
+    }
+
+    //angular attenuation
+    double f_ang = 1.0;
+    Vector3 vo = malloc(sizeof(Vector3));
+    v3dm_subtract(intersection, light->position, vo);
+    if (strcmp(light->kind, "SPOT") == 0) {
+      f_ang = pow(v3dm_dot(vo, light->direction), light->angular.a0);
+    } else if (alpha > theta) {
+      f_ang = 0.0;
+    }
+
+    //calculate the diffuse reflection
+    double Idiff_r = object->diffuse_color.r * light->color.r*();
+    double Idiff_g =
+    double Idiff_b =
+
+    //calculate the specular reflection
+    double Ispec_r = object->specular_color.r * light->color.r * ();
+
+    final_color += f_ang *f_rad * (Idiff+Ispec);
+    light = light->next;
+  }
+
+
   return color;
 }
 
@@ -676,7 +754,7 @@ int* render(double width, double height, double xRes, double yRes, Object *objec
       v3dm_assign(x, y, -1, Pij);
       v3dm_add(Pij, Ro, Rd);
       v3dm_unit(Rd, Rd);
-      color = castARay_non(object, Ro, Rd);
+      color = castARay(object, Ro, Rd);
       //print_color(*color);
       colors[counter] = (int) color->r;
       counter += (int) sizeof(int);
