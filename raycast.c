@@ -35,10 +35,12 @@ void parse_type(FILE *fh, Object *obj) {
   skip_non_alphanum(fh);
 }
 
+//moves pointer in file back str(len) positions
 void rewind_file(FILE *fh, char *str) {
   fseek(fh, -strlen(str), SEEK_CUR);
 }
 
+//checks the string to see if it is alphanum or not
 int check_str(FILE *fh, char *str) {
   char *c = malloc(sizeof(char));
   for (int i = 0; i < strlen(str); i++) {
@@ -47,7 +49,6 @@ int check_str(FILE *fh, char *str) {
       return 0;
     }
   }
-  //rewind_file(fh, str);
   return 1;
 }
 
@@ -650,8 +651,9 @@ void intersection_plane(Vector3 *Ro, Vector3 *Rd, struct Vector3 norm, struct Ve
   v3dm_assign(NAN, NAN, NAN, result);
 }
 
-Vector3 castARay_primitive(Object *object, Vector3 Ro, Vector3 *Rd) {
+ObjectPlus castARay_primitive(Object *object, Vector3 Ro, Vector3 *Rd) {
   Vector3 *intersection = malloc(sizeof(Vector3));
+  ObjectPlus result = malloc(sizeof(ObjectPlus));
   double closest_distance, distance;
   closest_distance = NAN;
   Vector3 closest_intersection = malloc(sizeof(Vector3));
@@ -672,15 +674,19 @@ Vector3 castARay_primitive(Object *object, Vector3 Ro, Vector3 *Rd) {
         if (isnan(closest_distance)) {
           closest_distance = distance;
           closest_intersection = intersection;
+          result.object = object;
+          result.intersection = intersection;
         } else  if (distance < closest_distance) {
           closest_distance = distance;
           closest_intersection = intersection;
+          result.object = object;
+          result.intersection = intersection;
         }
       }
     }
     object = object->next;
   }
-  return intersection;
+  return result;
 }
 
 //returns color of closest object in front of the camera, or black if no object is closest in front of the camera
@@ -688,17 +694,37 @@ Color* castARay(Object *object, Vector3 *Ro, Vector3 *Rd, Light *light) {
   Vector3 *intersection = malloc(sizeof(Vector3));
   Vector3 *hit = malloc(sizeof(Vector3));
   Color final_color = malloc(sizeof(Color));
+  ObjectPlus result = malloc(sizeof(ObjectPlus));
   Vector3 *Ro2 = malloc(sizeof(Vector3));
-  Vector3 *Rd2 = mallco(sizeof(Vector3));
+  Vector3 *Rd2 = malloc(sizeof(Vector3));
+  Vector3 *v = malloc(sizeof(Vector3));
+  Vector3 *r = malloc(sizeof(Vector3));
+  Vector3 *l = malloc(sizeof(Vector3));
+  Vector3 *n = malloc(sizeof(Vector3));
+  double n_dot_l;
 
 
   for (int i = 0; light != NULL; i++) {
-    Ro2 = castARay_primitive(object, Ro, Rd);
+    result = castARay_primitive(object, Ro, Rd);
+    Ro2 = result->intersection;
+    object = result->object;
+    v3dm_subtract(Ro2, Ro, v);
+    v3dm_subtract(light->position, Ro2, l);
+
+    if (!isnan(object->normal)) {
+      v3dm_reflect(l, object->normal, r);
+      n_dot_l = v3dm_dot(l, object->normal);
+    } else {
+      v3dm_subtract(Ro2, object->position, n);
+      v3dm_reflect(l, n, r);
+      n_dot_l = v3dm_dot(l, n);
+    }
+
     v3dm_subtract(light->position, intersection, Rd2);
     v3dm_unit(Rd2, Rd2);
     hit = castARay_primitive(object, Ro2, Rd2);
     if (!isnan(hit->position.x)) continue; //light source is OFF
-    light = light->next;
+    //light = light->next;
 
 
     //radial attenuation
@@ -719,19 +745,48 @@ Color* castARay(Object *object, Vector3 *Ro, Vector3 *Rd, Light *light) {
     }
 
     //calculate the diffuse reflection
-    double Idiff_r = object->diffuse_color.r * light->color.r*();
-    double Idiff_g =
-    double Idiff_b =
+    double Idiff_r, Idiff_g, Idiff_b;
+    if (n_dot_l > 0.0) {
+      Idiff_r = object->diffuse_color.r * light->color.r * (n_dot_l);
+      Idiff_g = object->diffuse_color.g * light->color.g * (n_dot_l);
+      Idiff_b = object->diffuse_color.b * light->color.b * (n_dot_l);
+    } else {
+      Idiff_r = 0.0;
+      Idiff_g = 0.0;
+      Idiff_b = 0.0;
+    }
+
 
     //calculate the specular reflection
-    double Ispec_r = object->specular_color.r * light->color.r * ();
+    double Ispec_r, Ispec_g, Ispec_b;
+    if (v3dm_dot(v,r) > 0) {
+      Ispec_r = object->specular_color.r * light->color.r * (v3dm_dot(v, r));
+      Ispec_g = object->specular_color.g * light->color.g * (v3dm_dot(v, r));
+      Ispec_b = object->specular_color.b * light->color.b * (v3dm_dot(v, r));
+    } else {
+      Ispec_r = 0.0;
+      Ispec_g = 0.0;
+      Ispec_b = 0.0;
+    }
 
-    final_color += f_ang *f_rad * (Idiff+Ispec);
+
+    final_color->r += f_ang *f_rad * (Idiff_r+Ispec_r);
+    final_color->g += f_ang *f_rad * (Idiff_g+Ispec_g);
+    final_color->b += f_ang *f_rad * (Idiff_b+Ispec_b);
     light = light->next;
   }
 
+  if (final_color->r > 255.0) {
+    final_color->r = 255.0;
+  }
+  if (final_color->g > 255.0) {
+    final_color->g = 255.0;
+  }
+  if (final_color->b > 255.0) {
+    final_color->b = 255.0;
+  }
 
-  return color;
+  return final_color;
 }
 
 //grabs color values of closest objects in front of camera and writes them to an array to return when complete

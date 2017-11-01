@@ -32,4 +32,9 @@ typedef struct Light {
   struct Light *prev, *next;
 } Light;
 
+typedef struct ObjectPlus {
+  struct Object object;
+  struct Vector3 intersection;
+} ObjectPlus;
+
 #endif
