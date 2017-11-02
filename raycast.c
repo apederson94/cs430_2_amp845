@@ -8,6 +8,8 @@
 void skip_non_alphanum();
 void intersection_sphere();
 
+//TODO: CLAMP AT THE END, NOT THE BEGINNING.
+
 //MARK: - PARSER FUNCTIONS
 
 //parses the object type from csv
@@ -188,9 +190,6 @@ void parse_color(FILE *fh, Object *obj) {
         perror("Error: Color values must be greater than 0.0. Please retry with correct color values.");
         exit(EXIT_FAILURE);
       } else {
-        if (obj->color.r > 1.0) {
-          obj->color.r = 1.0;
-        }
         obj->color.r *= 255;
         skip_non_alphanum(fh);
       }
@@ -207,9 +206,6 @@ void parse_color(FILE *fh, Object *obj) {
         perror("Error: Color values may only range from 0.0 to 1.0. Please retry with the correct color values.");
         exit(EXIT_FAILURE);
       } else {
-        if (obj->color.g > 1.0) {
-          obj->color.g = 1.0;
-        }
         obj->color.g *= 255;
         skip_non_alphanum(fh);
       }
@@ -226,9 +222,6 @@ void parse_color(FILE *fh, Object *obj) {
         perror("Error: Color values may only range from 0.0 to 1.0. Please retry with the correct color values.");
         exit(EXIT_FAILURE);
       } else {
-        if (obj->color.b > 1.0) {
-          obj->color.b = 1.0;
-        }
         obj->color.b *= 255;
         skip_non_alphanum(fh);
       }
@@ -266,9 +259,6 @@ void parse_color(FILE *fh, Object *obj) {
         perror("Error: diffuse_color values may only range from 0.0 to 1.0. Please retry with the correct diffuse_color values.");
         exit(EXIT_FAILURE);
       } else {
-        if (obj->diffuse_color.g > 1.0) {
-          obj->diffuse_color.g = 1.0;
-        }
         obj->diffuse_color.g *= 255;
         skip_non_alphanum(fh);
       }
@@ -285,9 +275,6 @@ void parse_color(FILE *fh, Object *obj) {
         perror("Error: diffuse_color values may only range from 0.0 to 1.0. Please retry with the correct diffuse_color values.");
         exit(EXIT_FAILURE);
       } else {
-        if (obj->diffuse_color.b > 1.0) {
-          obj->diffuse_color.b = 1.0;
-        }
         obj->diffuse_color.b *= 255;
         skip_non_alphanum(fh);
       }
@@ -305,9 +292,6 @@ void parse_color(FILE *fh, Object *obj) {
         perror("Error: specular_color values may only range from 0.0 to 1.0. Please retry with correct specular_color values.");
         exit(EXIT_FAILURE);
       } else {
-        if (obj->specular_color.r > 1.0) {
-          obj->specular_color.r = 1.0;
-        }
         obj->specular_color.r *= 255;
         skip_non_alphanum(fh);
       }
@@ -324,9 +308,6 @@ void parse_color(FILE *fh, Object *obj) {
         perror("Error: specular_color values may only range from 0.0 to 1.0. Please retry with the correct specular_color values.");
         exit(EXIT_FAILURE);
       } else {
-        if (obj->specular_color.g > 1.0) {
-          obj->specular_color.g = 1.0;
-        }
         obj->specular_color.g *= 255;
         skip_non_alphanum(fh);
       }
@@ -343,9 +324,6 @@ void parse_color(FILE *fh, Object *obj) {
         perror("Error: specular_color values may only range from 0.0 to 1.0. Please retry with the correct specular_color values.");
         exit(EXIT_FAILURE);
       } else {
-        if (obj->specular_color.b > 1.0) {
-          obj->specular_color.b = 1.0;
-        }
         obj->specular_color.b *= 255;
         skip_non_alphanum(fh);
       }
@@ -600,6 +578,31 @@ double argv_to_double(char const *str, int index, double result) {
 
 //MARK: -CALCULATIONS
 
+//clamps max value to 255.0 and minimum value to 0.0
+void clamp(Color *color) {
+
+  //clamping red
+  if (color.r > 255.0) {
+    color.r = 255;
+  } else if (color.r < 0.0) {
+    color.r = 0.0;
+  }
+
+  //clamping green
+  if (color.g > 255.0) {
+    color.g = 255;
+  } else if (color.g < 0.0) {
+    color.g = 0.0;
+  }
+
+  //clapming blue
+  if (color.b > 255.0) {
+    color.b = 255;
+  } else if (color.b < 0.0) {
+    color.b = 0.0;
+  }
+}
+
 //calculates sphere intersections and returns closest one that is in front of the camera
 void intersection_sphere(Vector3 *Rd, Vector3 *Ro, double Cx, double Cy, double Cz, double radius, Vector3 *result) {
   double b, c, t0, t1, x, y, z;
@@ -810,7 +813,7 @@ int* render(double width, double height, double xRes, double yRes, Object *objec
       v3dm_add(Pij, Ro, Rd);
       v3dm_unit(Rd, Rd);
       color = castARay(object, Ro, Rd);
-      //print_color(*color);
+      clamp(color);
       colors[counter] = (int) color->r;
       counter += (int) sizeof(int);
       colors[counter] = (int) color->g;
