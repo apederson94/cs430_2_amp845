@@ -11,8 +11,8 @@ typedef struct Radial {
 
 typedef struct Object {
   char *kind;
-  double radius, width, height, theta;
-  struct Vector3 position, normal;
+  double radius, width, height, theta, angular;
+  struct Vector3 position, normal, direction;
   struct Object *prev, *next;
   struct Color diffuse_color, specular_color, color;
   struct Radial radial;
@@ -33,8 +33,13 @@ typedef struct Light {
 } Light;
 
 typedef struct ObjectPlus {
-  struct Object object;
-  struct Vector3 intersection;
+  struct Object *object;
+  struct Vector3 *intersection;
 } ObjectPlus;
+
+typedef struct Scene {
+  struct Object *object;
+  struct Light *light;
+} Scene;
 
 #endif
