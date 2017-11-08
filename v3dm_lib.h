@@ -24,6 +24,7 @@ static inline void v3dm_scale(Vector3 *a, double b, Vector3 *c) {
 }
 
 static inline void v3dm_unit(Vector3 *a, Vector3 *b) {
+//TODO: check 0
   v3dm_scale(a, 1/v3dm_magnitude(a), b);
 }
 
@@ -77,9 +78,9 @@ static inline void v3dm_cross(Vector3 *a, Vector3 *b, Vector3 *c) {
 }
 
 static inline void v3dm_reflect(Vector3 *a, Vector3 *n, Vector3 *b) {
-  Vector3 *c;
-  v3dm_unit(n, n);
-  v3dm_scale(n, v3dm_dot(n, a), c);
-  v3dm_scale(c, 2, c);
-  v3dm_subtract(a, c, b);
+  Vector3 *c, *n_unit;
+  v3dm_unit(n, n_unit);
+  v3dm_scale(n_unit, 2 * v3dm_dot(a, n), c);
+  v3dm_subtract(c, a, b);
+
 }
