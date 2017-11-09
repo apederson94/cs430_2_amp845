@@ -454,13 +454,14 @@ void parse_normal(FILE *fh, Object *obj) {
   skip_non_alphanum(fh);
 }
 
+//TODO: PLANE specular_color POTENTIALLY WRONG
 //comprehensive parser that combines all parser helper functions
-Scene* parse_csv(FILE *fh, Scene *scene, char *character) {
+Scene* parse_csv(FILE *fh, Scene *scene, char *character, Object *objects, Light *lights, int *obj_size, int *l_size) {
+  int l_counter = 0;
+  int obj_counter = 0;
   Object *new_obj = malloc(sizeof(Object));
-  char *new_char = malloc(sizeof(char));
-  char *str = malloc(10);
-  if (*character != EOF) {
-    Object *object_next = malloc(sizeof(Object));
+  char *str = malloc(100);
+  while (*character != EOF) {
     parse_type(fh, new_obj);
     if (strcmp(new_obj->kind, "CAMERA") == 0) {
       parse_field(fh, new_obj);
@@ -492,7 +493,13 @@ Scene* parse_csv(FILE *fh, Scene *scene, char *character) {
           parse_position(fh, new_obj);
         }
       }
-      rewind_file(fh, str);
+      if (*character != EOF && strcmp(new_obj->kind, "SPHERE") == 0) {
+        rewind_file(fh, str);
+        strcpy(str, "");
+        /*printf("%s, r: %f\ncr: %f, cg: %f, cb: %f\ndcr: %f, dcg: %f, dcb: %f\nscr: %f, scg: %f, scb: %f\nx: %f, y: %f, z: %f\n", new_obj->kind, new_obj->radius,
+        new_obj->color.r, new_obj->color.g, new_obj->color.b, new_obj->diffuse_color.r, new_obj->diffuse_color.g, new_obj->diffuse_color.b, new_obj->specular_color.r,
+        new_obj->specular_color.g, new_obj->specular_color.b, new_obj->position.x, new_obj->position.y, new_obj->position.z);*/
+      }
     } else if (strcmp(new_obj->kind, "PLANE") == 0) {
       while (strcmp(str, "light") != 0 && strcmp(str, "sphere") != 0 && strcmp(str, "camera") != 0 && *character != EOF) {
         sprintf(character, "%c", fgetc(fh));
@@ -519,7 +526,14 @@ Scene* parse_csv(FILE *fh, Scene *scene, char *character) {
           parse_position(fh, new_obj);
         }
       }
-      rewind_file(fh, str);
+      if (*character != EOF && strcmp(new_obj->kind, "PLANE") == 0) {
+        rewind_file(fh, str);
+        strcpy(str, "");
+        /*printf("%s, nx: %f, ny: %f, nz: %f\ncr: %f, cg: %f, cb: %f\ndcr: %f, dcg: %f, dcb: %f\nscr: %f, scg: %f, scb: %f\nx: %f, y: %f, z: %f\n",
+        new_obj->kind, new_obj->normal.x, new_obj->normal.y, new_obj->normal.z, new_obj->color.r, new_obj->color.g, new_obj->color.b, new_obj->diffuse_color.r,
+        new_obj->diffuse_color.g, new_obj->diffuse_color.b, new_obj->specular_color.r, new_obj->specular_color.g, new_obj->specular_color.b, new_obj->position.x,
+        new_obj->position.y, new_obj->position.z);*/
+      }
     } else if (strcmp(new_obj->kind, "LIGHT") == 0) {
       Light *new_light = malloc(sizeof(Light));
       while (strcmp(str, "camera") != 0 && strcmp(str, "plane") != 0 && strcmp(str, "sphere") != 0 && *character != EOF) {
@@ -551,6 +565,16 @@ Scene* parse_csv(FILE *fh, Scene *scene, char *character) {
           parse_position(fh, new_obj);
         }
       }
+      if (*character != EOF && strcmp(new_obj->kind, "LIGHT") == 0) {
+        rewind_file(fh, str);
+        strcpy(str, "");
+        /*printf("%s, cr: %f, cg: %f, cb: %f\na2: %f, a1: 5f, a0: %f\nth: %f, ang: %f\ndirx: %f, diry: %f, dirz: %f\n",
+        new_obj->kind, new_obj->color.r, new_obj->color.g, new_obj->color.b, new_obj->radial.a2, new_obj->radial.a1, new_obj->radial.a0,
+        new_obj->theta, new_obj->direction.x, new_obj->direction.y, new_obj->direction.z);*/
+      } else if (*character == EOF) {
+        rewind_file(fh, character);
+        strcpy(str, "");
+      }
 
       new_light->position = new_obj->position;
       new_light->color = new_obj->color;
@@ -566,31 +590,20 @@ Scene* parse_csv(FILE *fh, Scene *scene, char *character) {
       } else {
         new_light->kind = "SPOT";
       }
-      scene->light->next = new_light;
-      new_light->prev = scene->light;
-      scene->light = new_light;
-
-      free(new_obj);
+      lights[l_counter] = *new_light;
+      l_counter += 1;
     }
     skip_non_alphanum(fh);
     if (!(strcmp(new_obj->kind, "LIGHT") == 0)) {
-      new_obj->prev = scene->object;
-      scene->object->next = new_obj;
-      scene->object = new_obj;
-
-      //free(new_obj);
+      objects[obj_counter] = *new_obj;
+      obj_counter += 1;
     }
-    sprintf(new_char, "%c", fgetc(fh));
-    ungetc(*new_char, fh);
-    parse_csv(fh, scene, new_char);
-  } else {
-    free(new_obj);
-    free(new_char);
-    free(str);
-    scene->object->next = NULL;
-    scene->light->next = NULL;
-    return scene;
+    //sprintf(character, "%c", fgetc(fh));
+    //ungetc(*character, fh);
   }
+  *obj_size = obj_counter;
+  *l_size = l_counter;
+  return scene;
 }
 
 //skips all non-alphanumeric characters in a file
@@ -615,7 +628,7 @@ void skip_non_alphanum(FILE *fh){
 }
 
 //rewinds linked list and returns first object in list recursively
-Scene* rewind_scene(Scene *scene) {
+/*Scene* rewind_scene(Scene *scene) {
   if (scene->object->prev->kind != NULL && scene->light->prev->kind != NULL) {
     scene->object = scene->object->prev;
     scene->light = scene->light->prev;
@@ -631,30 +644,28 @@ Scene* rewind_scene(Scene *scene) {
   } else {
     return scene;
   }
-}
+}*/
 
 //returns camera width recursively
-double get_width(Object *object) {
-  if (strcmp(object->kind, "CAMERA") == 0) {
-    return object->width;
-  } else if (object->next == NULL) {
-    perror("Error: No camera found in input file. Please use an input file containing a camera object.");
-    exit(EXIT_FAILURE);
-  } else {
-    get_width(object->next);
+double get_width(Object *objects, int obj_size) {
+  for(int i = 0; i < obj_size; i++) {
+    if(strcmp(objects[i].kind, "CAMERA") == 0) {
+      return objects[i].width;
+    }
   }
+  perror("Error: No camera found in input file. Please use an input file containing a camera object.");
+  exit(EXIT_FAILURE);
 }
 
 //returns camera height recursively
-double get_height(Object *object) {
-  if (strcmp(object->kind, "CAMERA") == 0) {
-    return object->height;
-  } else if (object->next == NULL) {
-    perror("Error: No camera found in input file. Please use an input file containing a camera object.");
-    exit(EXIT_FAILURE);
-  } else {
-    get_height(object->next);
+double get_height(Object *objects, int obj_size) {
+  for (int i = 0; i < obj_size; i++) {
+    if(strcmp(objects[i].kind, "CAMERA") == 0) {
+      return objects[i].height;
+    }
   }
+  perror("Error: No camera found in input file. Please use an input file containing a camera object.");
+  exit(EXIT_FAILURE);
 }
 
 //converts argv[x] to a double value recursively
@@ -688,7 +699,7 @@ void clamp(Color *color) {
   } else if (color->r < 0.0) {
     color->r = 0.0;
   } else if (isnan(color->r)) {
-    color->r = 0.5;
+    color->r = 0.0;
   }
 
   //clamping green
@@ -697,7 +708,7 @@ void clamp(Color *color) {
   } else if (color->g < 0.0) {
     color->g = 0.0;
   } else if (isnan(color->g)) {
-    color->g = 0.5;
+    color->g = 0.0;
   }
 
   //clapming blue
@@ -706,7 +717,7 @@ void clamp(Color *color) {
   } else if (color->b < 0.0) {
     color->b = 0.0;
   } else if (isnan(color->b)) {
-    color->b = 0.5;
+    color->b = 0.0;
   }
 }
 
@@ -722,8 +733,7 @@ void intersection_sphere(Vector3 *Rd, Vector3 *Ro, double Cx, double Cy, double 
   t0 += (-b - (sqrt((b*b) - (4*c))))/2.0;
   t1 += (-b + (sqrt((b*b) - (4*c))))/2.0;
   if (!isnan(t0) && !isnan(t1) && !isinf(t0) && !isinf(t1)) {
-    //printf("t0: %f, t1: %f\n", t0, t1);
-    if (t0 >= 0 && t1 >= 0) {
+    if (t0 >= 0.0 && t1 >= 0.0) {
       if (t0 < t1) {
         v3dm_scale(Rd, t0, result);
         v3dm_add(Ro, result, result);
@@ -733,17 +743,16 @@ void intersection_sphere(Vector3 *Rd, Vector3 *Ro, double Cx, double Cy, double 
         v3dm_add(Ro, result, result);
 
       }
-    } else if (t1 >= 0) {
-      v3dm_scale(Rd, t1, result);
+    } else if (t1 <= 0.0) {
+      v3dm_scale(Rd, t0, result);
       v3dm_add(Ro, result, result);
 
-    } else if (t0 >= 0) {
-      v3dm_scale(Rd, t0, result);
+    } else if (t0 <= 0.0) {
+      v3dm_scale(Rd, t1, result);
       v3dm_add(Ro, result, result);
 
     }
   } else {
-    //printf("t0: %f, t1: %f\n", t0, t1);
     v3dm_assign(NAN, NAN, NAN, result);
   }
 }
@@ -768,169 +777,195 @@ void intersection_plane(Vector3 *Ro, Vector3 *Rd, struct Vector3 norm, struct Ve
   v3dm_assign(NAN, NAN, NAN, result);
 }
 
-ObjectPlus* castARay_primitive(Object *object, Vector3 *Ro, Vector3 *Rd, int j) {
-  Vector3 *intersection = malloc(sizeof(Vector3));
-  ObjectPlus *result = malloc(sizeof(ObjectPlus));
-  result->intersection = NULL;
+void castARay_primitive(Object *objects, Vector3 *Ro, Vector3 *Rd, int j, ObjectPlus *result, int obj_size) {
   double closest_distance, distance;
   closest_distance = NAN;
-  Vector3 *closest_intersection = malloc(sizeof(Vector3));
+  Vector3 _closest_intersection;
+  Vector3 *closest_intersection = &_closest_intersection;
   Color *color;
-  intersection = malloc(sizeof(Vector3));
-  while (object->kind != NULL) {
-    if (strcmp(object->kind, "CAMERA") != 0) {
-      if (strcmp(object->kind, "SPHERE") == 0) {
-        //TODO: SPHERE INTERSECTION ALWAYS NAN
-        intersection_sphere(Rd, Ro, object->position.x, object->position.y, object->position.z, object->radius, intersection);
-        //printf("%f, %f, %f\n", intersection->x, intersection->y, intersection->z);
-      } else if (strcmp(object->kind, "PLANE") == 0) {
-        intersection_plane(Ro, Rd, object->normal, object->position, intersection);
+  Object object;
+  //TODO: normal loops, plane first loop, weird data loop, repeat: found in castARay from casting a ray with new_object
+  //printf("INNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN\n");
+  for(int x = 0;  x < obj_size; x++) {
+    object = objects[x];
+    //printf("%s\n", object.kind);
+    if (strcmp(object.kind, "CAMERA") != 0) {
+      //printf("position: %f, %f, %f\n", object.position.x, object.position.y, object.position.z);
+      if (strcmp(object.kind, "SPHERE") == 0) {
+        //printf("1\n");
+        intersection_sphere(Rd, Ro, object.position.x, object.position.y, object.position.z, object.radius, result->intersection);
+        //printf("2\n");
+      } else if (strcmp(object.kind, "PLANE") == 0) {
+        //printf("3\n");
+        intersection_plane(Ro, Rd, object.normal, object.position, result->intersection);
+        //printf("4\n");
       }
-      //TODO: SPHERE NEVER CLOSEST OBJECT AND NOT ON "TOP" HALF OF IMAGE
-      if (!isnan(intersection->x) && !isnan(intersection->y) && !isnan(intersection->z)) {
-        distance = v3dm_pointToPointDistance(Ro, intersection);
+      if (!isnan(result->intersection->x) && !isnan(result->intersection->y) && !isnan(result->intersection->z)) {
+        //printf("5\n");
+        distance = v3dm_pointToPointDistance(Ro, result->intersection);
         if (isnan(closest_distance)) {
+          //printf("6\n");
           closest_distance = distance;
-          closest_intersection = intersection;
+          v3dm_assign(result->intersection->x, result->intersection->y, result->intersection->z, closest_intersection);
           result->object = object;
-          result->intersection = intersection;
+          result->valid = 1;
         } else if (distance < closest_distance) {
+          //printf("7\n");
           closest_distance = distance;
-          closest_intersection = intersection;
+          v3dm_assign(result->intersection->x, result->intersection->y, result->intersection->z, closest_intersection);
           result->object = object;
-          result->intersection = intersection;
+          result->valid = 1;
         }
       }
+      //printf("8\n");
     }
-    if (object->next != NULL) {
-      object = object->next;
-    }
+    //printf("9\n");
   }
-
-  if (result->intersection == NULL) {
-    result->intersection = malloc(sizeof(Vector3));
-    result->intersection->x = NAN;
-    result->intersection->y = NAN;
-    result->intersection->z = NAN;
-  }
-
-  return result;
+  //TODO: CHANGE FINAL_COLOR
+  //TODO: SPHERE NOT SHOWING UP IN IMAGE EVEN THOUGH REPORTED CLOSEST OBJ
+  v3dm_assign(closest_intersection->x, closest_intersection->y, closest_intersection->z, result->intersection);
+  //printf("10\n");
+  return;
 }
 
 //returns color of closest object in front of the camera, or black if no object is closest in front of the camera
-Color* castARay(Object *object, Vector3 *Ro, Vector3 *Rd, Light *light, int i, int j) {
-  //printf("castARay 1: %f, %f, %f\n", light->position.x, light->position.y, light->position.z);
-  Vector3 *intersection = malloc(sizeof(Vector3));
-  Vector3 *hit = malloc(sizeof(Vector3));
-  Color *final_color = malloc(sizeof(Color));
-  ObjectPlus *result = malloc(sizeof(ObjectPlus));
-  Vector3 *Ro2 = malloc(sizeof(Vector3));
-  Vector3 *Rd2 = malloc(sizeof(Vector3));
-  Vector3 *v = malloc(sizeof(Vector3));
-  Vector3 *r = malloc(sizeof(Vector3));
-  Vector3 *l = malloc(sizeof(Vector3));
-  Vector3 *n = malloc(sizeof(Vector3));
-  Color *light_color = malloc(sizeof(Color));
+void castARay(Object *objects, Vector3 *Ro, Vector3 *Rd, Light *lights, int i, int j, Color *final_color, int l_size, int obj_size) {
+  Vector3 _intersection;
+  Vector3 *intersection = &_intersection;
+  Vector3 _hit;
+  Vector3 *hit = &_hit;
+  ObjectPlus _result;
+  ObjectPlus *result = &_result;
+  Vector3 _Ro2;
+  Vector3 *Ro2 = &_Ro2;
+  Vector3 _Rd2;
+  Vector3 *Rd2 = &_Rd2;
+  Vector3 _v;
+  Vector3 *v = &_v;
+  Vector3 _r;
+  Vector3 *r = &_r;
+  Vector3 _l;
+  Vector3 *l = &_l;
+  Vector3 _n;
+  Vector3 *n = &_n;
+  Color _light_color;
+  Color *light_color = &_light_color;
+  Light light;
+  struct Object new_objects[1];
+  result->intersection = &_intersection;
+  result->valid = 0;
+  double epsilon;
+  //result->object = NULL;
   double n_dot_l;
 
-  while (light != NULL) {
-    v3dm_unit(&light->direction, &light->direction);
-    result = castARay_primitive(object, Ro, Rd, j);
-    if (isnan(result->intersection->x) || isnan(result->intersection->y) || isnan(result->intersection->z) || result->object == NULL) {
+  for (int x = 0; x < l_size; x++) {
+    light = lights[x];
+    v3dm_unit(&light.direction, &light.direction);
+    //printf("x: %d\n", x);
+    castARay_primitive(objects, Ro, Rd, j, result, obj_size);
+    //printf("result: %f, %f, %f\n", result->intersection->x, result->intersection->y, result->intersection->z);
+
+    //no intersection found
+    if (result->valid == 0) {
       //TODO: CHANGE BACK TO BLACK LATER, CURRENTLY DEBUG CODE TO FIGURE OUT WHAT'S GOING ON WITH SPHERE
-      final_color->r = 0.1;
+      //HALF THE IMAGE IS COMING BACK ALL FUCKY LIKE THIS
+      final_color->r = 0.5;
       final_color->g = 0.1;
       final_color->b = 0.1;
-      return final_color;
+      return;
     }
+
     Ro2 = result->intersection;
-    object = result->object;
+    new_objects[0] = result->object;
     v3dm_subtract(Ro2, Ro, v);
     v3dm_unit(v, v);
-
     if (!isnan(Ro2->x) && !isnan(Ro2->y) && !isnan(Ro2->z)) {
-      v3dm_subtract(&light->position, Ro2, l);
-      //v3dm_unit(l, l);
-      //printf("lp: %f, %f, %f\n", light->position.x, light->position.y, light->position.z);
+      v3dm_subtract(&light.position, Ro2, l);
+      v3dm_unit(l, l);
 
-      if (!isnan(object->normal.x) && !isnan(object->normal.y) && !isnan(object->normal.z)) {
-        //THIS LINE EDITS THE Ro2 VARIABLE FOR SOME REASON
-        v3dm_reflect(l, &object->normal, r);
-        //printf("Ro2.2: %f, %f, %f\n", Ro2->x, Ro2->y, Ro2->z);
-        //printf("l: %f, %f, %f\n", l->x, l->y, l->z);
-        n_dot_l = v3dm_dot(l, &object->normal);
+      if (!isnan(new_objects[0].normal.x) && !isnan(new_objects[0].normal.y) && !isnan(new_objects[0].normal.z)) {
+        v3dm_reflect(l, &new_objects[0].normal, r);
+        n_dot_l = v3dm_dot(l, &new_objects[0].normal);
 
       } else {
-        v3dm_subtract(Ro2, &object->position, n);
+        epsilon = 0.1 * new_objects[0].radius;
+        v3dm_subtract(Ro2, &new_objects[0].position, n);
+        v3dm_unit(n, n);
         v3dm_reflect(l, n, r);
+        v3dm_unit(r, r);
         n_dot_l = v3dm_dot(l, n);
       }
-
-      v3dm_subtract(&light->position, Ro2, Rd2);
+      //TODO: RD2 SOMETIMES NAN
+      v3dm_subtract(&light.position, Ro2, Rd2);
       v3dm_unit(Rd2, Rd2);
-      result = castARay_primitive(object, Ro2, Rd2, j);
+      v3dm_unit(Ro2, Ro2);
+      v3dm_assign(Ro2->x + epsilon, Ro2->y + epsilon, Ro2->z + epsilon, Ro2);
+      //printf("Rd2: %f, %f, %f\n", Rd2->x, Rd2->y, Rd2->z);
+      //TODO: LIGHTING SETUP
 
-      if (isnan(result->intersection->x) || isnan(result->intersection->y) || isnan(result->intersection->z)) {
+      castARay_primitive(new_objects, Ro2, Rd2, j, result, 1);
+      //toggling light here maybe??
+      if (result->valid == 1) {
         final_color->r = 0.0;
         final_color->g = 0.0;
-        final_color->b = 0.5;
-        return final_color;
+        final_color->b = 0.0;
+        return;
       }
     } else {
       final_color->r = 0.0;
       final_color->g = 0.0;
-      final_color->b = 0.0;
-
-      return final_color;
+      final_color->b = 0.5;
+      return;
     }
 
-    light_color = &light->color;
+    light_color = &light.color;
 
     //TODO: toggling light for shadow
 
 
     //radial attenuation
-    double dl = v3dm_pointToPointDistance(&light->position, intersection);
+    double dl = v3dm_pointToPointDistance(&light.position, intersection);
     double f_rad = 1.0;
-    if (dl < 10000) {
-      f_rad = 1/(light->radial.a2 * dl * dl + light->radial.a1 * dl + light->radial.a0);
+    if (dl < 1000) {
+      f_rad = 1/(light.radial.a2 * dl * dl + light.radial.a1 * dl + light.radial.a0);
     }
-
     //angular attenuation
     double f_ang = 1.0;
     Vector3 *vo = malloc(sizeof(Vector3));
-    v3dm_subtract(intersection, &light->position, vo);
-    if (strcmp(light->kind, "SPOT") == 0) {
-      double vo_dot_vl = v3dm_dot(vo, &light->direction);
+    v3dm_subtract(intersection, &light.position, vo);
+    v3dm_unit(vo, vo);
+    if (strcmp(light.kind, "SPOT") == 0) {
+      double vo_dot_vl = v3dm_dot(vo, &light.direction);
       double alpha = acos(vo_dot_vl);
-      if (alpha > light->theta) {
+      if (alpha > light.theta) {
         f_ang = 0.0;
       } else {
-        f_ang = pow(vo_dot_vl, light->angular);
+        f_ang = pow(vo_dot_vl, light.angular);
       }
     } else {
       f_ang = 1.0;
     }
-
     //calculate the diffuse reflection
     double Idiff_r, Idiff_g, Idiff_b;
     if (n_dot_l > 0.0) {
-      Idiff_r = result->object->diffuse_color.r * light_color->r * (n_dot_l);
-      Idiff_g = result->object->diffuse_color.g * light_color->g * (n_dot_l);
-      Idiff_b = result->object->diffuse_color.b * light_color->b * (n_dot_l);
+      //TODO: NEVER ENTERS HERE
+      Idiff_r = new_objects[0].diffuse_color.r * light_color->r * (n_dot_l);
+      Idiff_g = new_objects[0].diffuse_color.g * light_color->g * (n_dot_l);
+      Idiff_b = new_objects[0].diffuse_color.b * light_color->b * (n_dot_l);
     } else {
       Idiff_r = 0.0;
       Idiff_g = 0.0;
       Idiff_b = 0.0;
     }
 
-
     //calculate the specular reflection
     double Ispec_r, Ispec_g, Ispec_b;
     if (v3dm_dot(v,r) > 0) {
-      Ispec_r = result->object->specular_color.r * light_color->r * pow(v3dm_dot(v, r), 20);
-      Ispec_g = result->object->specular_color.g * light_color->g * pow(v3dm_dot(v, r), 20);
-      Ispec_b = result->object->specular_color.b * light_color->b * pow(v3dm_dot(v, r), 20);
+      //TODO: NEVER ENTERS HERE
+      Ispec_r = new_objects[0].specular_color.r * light_color->r * pow(v3dm_dot(v, r), 20);
+      Ispec_g = new_objects[0].specular_color.g * light_color->g * pow(v3dm_dot(v, r), 20);
+      Ispec_b = new_objects[0].specular_color.b * light_color->b * pow(v3dm_dot(v, r), 20);
+      printf("color: %f, %f, %f\n", new_objects[0].diffuse_color.r, new_objects[0].diffuse_color.g, new_objects[0].diffuse_color.b);
     } else {
       Ispec_r = 0.0;
       Ispec_g = 0.0;
@@ -940,45 +975,41 @@ Color* castARay(Object *object, Vector3 *Ro, Vector3 *Rd, Light *light, int i, i
     final_color->r += f_ang *f_rad * (Idiff_r+Ispec_r);
     final_color->g += f_ang *f_rad * (Idiff_g+Ispec_g);
     final_color->b += f_ang *f_rad * (Idiff_b+Ispec_b);
-    light = light->next;
   }
-
-  free(intersection);
-  free(hit);
-  free(result);
-  free(Ro2);
-  free(Rd2);
-  free(v);
-  free(r);
-  free(l);
-  free(n);
-
-  return final_color;
+  //final_color->r = new_objects[0].diffuse_color.r;
+  //final_color->g = new_objects[0].diffuse_color.g;
+  //final_color->b = new_objects[0].diffuse_color.b;
+  return;
 }
 
 //grabs color values of closest objects in front of camera and writes them to an array to return when complete
-int* render(double width, double height, double xRes, double yRes, Scene *scene) {
+int* render(double width, double height, double xRes, double yRes, Scene *scene, int l_size, int obj_size) {
   double x, y;
   int *colors;
   Vector3 *Pij, *Rd, *Ro;
-  Color *color;
-  Ro = malloc(sizeof(struct Vector3));
+  Color _color;
+  Color *color = &_color;
+  Ro = malloc(sizeof(Vector3));
   Pij = malloc(sizeof(Vector3));
   Rd = malloc(sizeof(Vector3));
   color = malloc(sizeof(Color));
-  colors = malloc(xRes * yRes * 3);
+  colors = malloc(sizeof(int) * xRes * yRes * 3);
   v3dm_assign(0, 0, 0, Ro);
   int counter = 0;
-  for (int i = 0; i < xRes; i++) {
-    x = -(width/2) + (i * (width/xRes)) + (0.5 * (width/xRes));
-    for (int j = 0; j < yRes; j++) {
-      y = -(height/2) + (j * (height/yRes)) + (0.5 * (height/yRes));
-      //TODO: FIND OUT WHY THIS WORKS MAYBE IF I HAVE TIME
-      v3dm_assign(y, -x, -1, Pij);
+  for (int j = 0; j < yRes; j++) {
+    y =  (-(height/2) + (j * (height/yRes)) + (0.5 * (height/yRes)));
+    //printf("%d\n", j);
+    for (int i = 0; i < xRes; i++) {
+      x = -(width/2) + (i * (width/xRes)) + (0.5 * (width/xRes));
+      //TODO: FIND OUT WHY THIS WORKS MAYBE IF I HAVE TIME; x = y, y = -x was solution
+      v3dm_assign(x, y, -1, Pij);
       v3dm_add(Pij, Ro, Rd);
       v3dm_unit(Rd, Rd);
+
+      //TODO: RD IS SOMETIMES NAN.
       //TODO: SPHERE INTERSECTIONS AREN'T WORKING AND HALF OF IMAGE IS NOT USED
-      color = castARay(scene->object, Ro, Rd, scene->light, i, j);
+      //here
+      castARay(scene->objects, Ro, Rd, scene->lights, i, j, color, l_size, obj_size);
       clamp(color);
       colors[counter] = (int) (color->r * 255);
       counter++;
@@ -993,9 +1024,8 @@ int* render(double width, double height, double xRes, double yRes, Scene *scene)
 
 //writes all data in the colors array to a file
 void write_to_file(FILE *fh, int *array, int xRes, int yRes) {
-  for (int i = 0; i < xRes * yRes * 3; i+= 1) {
+  for (int i = 0; i < xRes * yRes * 3; i++) {
     fprintf(fh, "%d\n", array[i]);
-
   }
 }
 
@@ -1013,6 +1043,8 @@ int checkExtension(char *fileName, char *extension) {
 
 //MARK: -MAIN FUNCTION
 int main(int argc, char const *argv[]) {
+  printf("PROGRAM START\nINITIAL CONDITIONS CHECK\n");
+
   //initial check variables
   int test_index = 4;
   char *test_str;
@@ -1046,6 +1078,8 @@ int main(int argc, char const *argv[]) {
     exit(EXIT_FAILURE);
   }
 
+  printf("CHECKS PASSED\nSETTING UP VARIABLES\n");
+
   //variables for setup later
   FILE *input_file, *output_file;
   char *character = malloc(sizeof(char));
@@ -1054,10 +1088,11 @@ int main(int argc, char const *argv[]) {
   int *colors;
 
   //setting up some variables
+  int l_size, obj_size;
   Object *object = malloc(sizeof(Object));
+  struct Object objects[128];
+  struct Light lights[128];
   Scene *scene = malloc(sizeof(Scene));
-  Object *scene_obj = malloc(sizeof(Object));
-  Light *scene_light = malloc(sizeof(Light));
   Light *light = malloc(sizeof(Scene));
   Object *result_object = malloc(sizeof(Object));
   input_file = fopen(argv[3], "r");
@@ -1065,38 +1100,38 @@ int main(int argc, char const *argv[]) {
 
   xRes = argv_to_double(argv[1], index, xRes);
   yRes = argv_to_double(argv[2], index, yRes);
-  scene->object = scene_obj;
-  scene->light = scene_light;
+  scene->objects = objects;
+  scene->lights = lights;
 
 
   //replacing character in file for parser to work correctly
   ungetc(*character, input_file);
 
-  printf("VARIABLES SETUP\n");
+  printf("VARIABLE SETUP COMPLETE\n");
 
   printf("PARSING FILE\n");
 
   //parsing to return object
-  scene = parse_csv(input_file, scene, character);
+  scene = parse_csv(input_file, scene, character, objects, lights, &obj_size, &l_size);
   fclose(input_file);
 
   printf("FILE PARSED\n");
 
   //rewinding linked_list then getting width & height from camera and rewinding again
-  scene = rewind_scene(scene);
+  //scene = rewind_scene(scene);
 
   //real world width & height values
-  width = get_width(scene->object);
-  height = get_height(scene->object);
+  width = get_width(scene->objects, obj_size);
+  height = get_height(scene->objects, obj_size);
 
   //rewinding linked list to be reused
-  scene = rewind_scene(scene);
+  //scene = rewind_scene(scene);
 
   printf("RENDERING\n");
 
   //allocating memory for array to accept all color values
   colors = malloc(xRes * yRes * sizeof(double) * 3);
-  colors = render(width, height, xRes, yRes, scene);
+  colors = render(width, height, xRes, yRes, scene, l_size, obj_size);
 
   printf("RENDER COMPLETE\n");
 

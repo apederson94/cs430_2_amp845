@@ -13,15 +13,9 @@ typedef struct Object {
   char *kind;
   double radius, width, height, theta, angular;
   struct Vector3 position, normal, direction;
-  struct Object *prev, *next;
   struct Color diffuse_color, specular_color, color;
   struct Radial radial;
 } Object;
-
-typedef struct Pixel {
-  struct Color color;
-  struct Pixel *next, *prev;
-} Pixel;
 
 typedef struct Light {
   char *kind;
@@ -29,17 +23,17 @@ typedef struct Light {
   struct Color color;
   struct Radial radial;
   double theta, angular;
-  struct Light *prev, *next;
 } Light;
 
 typedef struct ObjectPlus {
-  struct Object *object;
+  struct Object object;
   struct Vector3 *intersection;
+  int valid;
 } ObjectPlus;
 
 typedef struct Scene {
-  struct Object *object;
-  struct Light *light;
+  struct Object *objects;
+  struct Light *lights;
 } Scene;
 
 #endif
