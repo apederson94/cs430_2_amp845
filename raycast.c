@@ -997,7 +997,7 @@ int* render(double width, double height, double xRes, double yRes, Scene *scene,
   v3dm_assign(0, 0, 0, Ro);
   int counter = 0;
   for (int j = 0; j < yRes; j++) {
-    y =  (-(height/2) + (j * (height/yRes)) + (0.5 * (height/yRes)));
+    y =  (height/2) - (j * (height/yRes)) - (0.5 * (height/yRes));
     //printf("%d\n", j);
     for (int i = 0; i < xRes; i++) {
       x = -(width/2) + (i * (width/xRes)) + (0.5 * (width/xRes));
