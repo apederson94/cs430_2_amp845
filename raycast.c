@@ -929,7 +929,6 @@ void castARay_primitive(Object *objects, Vector3 *Ro, Vector3 *Rd, int j, Object
           result->t = t_result;
           result->valid = 1;
         } else {
-          printf("HERE!\n");
           result->valid = 2;
         }
       }
@@ -1001,7 +1000,7 @@ void castARay(Object *objects, Vector3 *Ro, Vector3 *Rd, Light *lights, int i, i
     epsilonz = 0.1 * new_object.normal.z;
 
   } else {
-    epsilonz = 1 * new_object.radius;
+    epsilonz = 10000 * new_object.radius;
     v3dm_subtract(Ro2, &new_object.position, n);
     v3dm_unit(n, n);
     v3dm_reflect(l, n, r);
