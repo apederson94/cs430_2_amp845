@@ -454,6 +454,80 @@ void parse_normal(FILE *fh, Object *obj) {
   skip_non_alphanum(fh);
 }
 
+//parses light direction from csv
+void parse_direction(FILE *fh, Object *obj) {
+  char *str = (char *) malloc(sizeof(char) * 6);
+  char *character = malloc(sizeof(char));
+  int check = 0;
+  char *tmp = malloc(100);
+  sprintf(character, "%c", fgetc(fh));
+  while (*character != 58) {
+    strcat(str, character);
+    sprintf(character, "%c", fgetc(fh));
+  }
+  skip_non_alphanum(fh);
+  if (strcmp(str, "direction") == 0) {
+    fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
+    check = check_str(fh, tmp);
+    if (check == 1) {
+      sscanf(tmp, "%lf", &obj->direction.x);
+    } else {
+      perror("Error: Normal values must be of numeric type. Please try again with numeric values.");
+      exit(EXIT_FAILURE);
+    }
+
+    skip_non_alphanum(fh);
+    fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
+    check = check_str(fh, tmp);
+    if (check == 1) {
+      sscanf(tmp, "%lf", &obj->direction.y);
+    } else {
+      perror("Error: Normal values must be of numeric type. Please try again with numeric values.");
+      exit(EXIT_FAILURE);
+    }
+
+    skip_non_alphanum(fh);
+    fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
+    check = check_str(fh, tmp);
+    if (check == 1) {
+      sscanf(tmp, "%lf", &obj->direction.z);
+    } else {
+      perror("Error: Normal values must be of numeric type. Please try again with numeric values.");
+      exit(EXIT_FAILURE);
+    }
+  }
+  free(character);
+  free(tmp);
+  skip_non_alphanum(fh);
+}
+
+void parse_angular(FILE *fh, Object *obj) {
+  char *str = (char *) malloc(sizeof(char) * 6);
+  char *character = malloc(sizeof(char));
+  int check = 0;
+  char *tmp = malloc(100);
+  sprintf(character, "%c", fgetc(fh));
+  while (*character != 58) {
+    strcat(str, character);
+    sprintf(character, "%c", fgetc(fh));
+  }
+  skip_non_alphanum(fh);
+  if (strcmp(str, "angular-a0") == 0) {
+    fscanf(fh, "%[a-z | A-Z | 0-9 | . | -]", tmp);
+    check = check_str(fh, tmp);
+    if (check == 1) {
+      sscanf(tmp, "%lf", &obj->angular);
+    } else {
+      perror("Error: Angular values must be of numeric type. Please try again with numeric values.");
+      exit(EXIT_FAILURE);
+    }
+  }
+  free(character);
+  free(tmp);
+  skip_non_alphanum(fh);
+}
+
+
 //TODO: PLANE specular_color POTENTIALLY WRONG
 //comprehensive parser that combines all parser helper functions
 Scene* parse_csv(FILE *fh, Scene *scene, char *character, Object *objects, Light *lights, int *obj_size, int *l_size) {
@@ -563,13 +637,21 @@ Scene* parse_csv(FILE *fh, Scene *scene, char *character, Object *objects, Light
           rewind_file(fh, str);
           strcpy(str, "");
           parse_position(fh, new_obj);
+        } else if (strcmp(str, "direction") == 0) {
+          rewind_file(fh, str);
+          strcpy(str, "");
+          parse_direction(fh, new_obj);
+        } else if (strcmp(str, "angular-a0") == 0) {
+          rewind_file(fh, str);
+          strcpy(str, "");
+          parse_angular(fh, new_obj);
         }
       }
       if (*character != EOF && strcmp(new_obj->kind, "LIGHT") == 0) {
         rewind_file(fh, str);
         strcpy(str, "");
-        /*printf("%s, cr: %f, cg: %f, cb: %f\na2: %f, a1: 5f, a0: %f\nth: %f, ang: %f\ndirx: %f, diry: %f, dirz: %f\n",
-        new_obj->kind, new_obj->color.r, new_obj->color.g, new_obj->color.b, new_obj->radial.a2, new_obj->radial.a1, new_obj->radial.a0,
+        //printf("%s, cr: %f, cg: %f, cb: %f\na2: %f, a1: 5f, a0: %f\nth: %f, ang: %f\ndirx: %f, diry: %f, dirz: %f\n",
+        /*new_obj->kind, new_obj->color.r, new_obj->color.g, new_obj->color.b, new_obj->radial.a2, new_obj->radial.a1, new_obj->radial.a0,
         new_obj->theta, new_obj->direction.x, new_obj->direction.y, new_obj->direction.z);*/
       } else if (*character == EOF) {
         rewind_file(fh, character);
@@ -595,6 +677,11 @@ Scene* parse_csv(FILE *fh, Scene *scene, char *character, Object *objects, Light
     }
     skip_non_alphanum(fh);
     if (!(strcmp(new_obj->kind, "LIGHT") == 0)) {
+      if (strcmp(new_obj->kind, "SPHERE") == 0 && new_obj->radius == 0) {
+        //skip
+      } else if (strcmp(new_obj->kind, "PLANE") == 0) {
+        //zero normal check
+      }
       objects[obj_counter] = *new_obj;
       obj_counter += 1;
     }
@@ -722,7 +809,7 @@ void clamp(Color *color) {
 }
 
 //calculates sphere intersections and returns closest one that is in front of the camera
-void intersection_sphere(Vector3 *Rd, Vector3 *Ro, double Cx, double Cy, double Cz, double radius, Vector3 *result) {
+void intersection_sphere(Vector3 *Rd, Vector3 *Ro, double Cx, double Cy, double Cz, double radius, Vector3 *result, double *t_result, int ch) {
   double b, c, t0, t1, x, y, z;
   Vector3 _subtracted;
   Vector3 *subtracted = &_subtracted;
@@ -732,99 +819,124 @@ void intersection_sphere(Vector3 *Rd, Vector3 *Ro, double Cx, double Cy, double 
   c = (subtracted->x * subtracted->x) + (subtracted->y * subtracted->y) + (subtracted->z * subtracted->z) - (radius * radius);
   t0 += (-b - (sqrt((b*b) - (4*c))))/2.0;
   t1 += (-b + (sqrt((b*b) - (4*c))))/2.0;
-  if (!isnan(t0) && !isnan(t1) && !isinf(t0) && !isinf(t1)) {
+  //TODO: UNFUCK THIS LOGIC
+  if (!isnan(t0) && !isnan(t1)) {
     if (t0 >= 0.0 && t1 >= 0.0) {
       if (t0 < t1) {
+        *t_result = t0;
         v3dm_scale(Rd, t0, result);
         v3dm_add(Ro, result, result);
 
       } else if (t1 <= t0) {
+        *t_result = t1;
         v3dm_scale(Rd, t1, result);
         v3dm_add(Ro, result, result);
 
       }
-    } else if (t1 <= 0.0) {
-      v3dm_scale(Rd, t0, result);
-      v3dm_add(Ro, result, result);
-
-    } else if (t0 <= 0.0) {
+    } else if (t1 >= 0.0) {
+      *t_result = t1;
       v3dm_scale(Rd, t1, result);
       v3dm_add(Ro, result, result);
 
+    } else if (t0 >= 0.0) {
+      *t_result = t0;
+      v3dm_scale(Rd, t0, result);
+      v3dm_add(Ro, result, result);
+
     }
+  } else if (isnan(t1) && !isnan(t0)) {
+    *t_result = t0;
+    v3dm_scale(Rd, t0, result);
+    v3dm_add(Ro, result, result);
+  } else if (isnan(t0) && !isnan(t0)){
+    *t_result = t1;
+    v3dm_scale(Rd, t1, result);
+    v3dm_add(Ro, result, result);
   } else {
+    *t_result = INFINITY;
     v3dm_assign(NAN, NAN, NAN, result);
   }
 }
 
 //calculates plane intersection and returns closest intersection in front of the camera
-void intersection_plane(Vector3 *Ro, Vector3 *Rd, struct Vector3 norm, struct Vector3 point, Vector3 *result) {
+void intersection_plane(Vector3 *Ro, Vector3 *Rd, struct Vector3 norm, struct Vector3 point, Vector3 *result, double *t_result) {
   double dotRo, dotRd, d, t;
-  Vector3 *tmp;
-  d = v3dm_pointToPlaneDistance(norm, point, Ro);
+  Vector3 tmpro, tmprd, n_unit, origin;
+  v3dm_unit(&norm, &n_unit);
+  d = v3dm_pointToPlaneDistance(n_unit, point, Ro);
   if (!isnan(d) && d > 0) {
-    dotRo = v3dm_dot(&norm, Ro);
-    dotRd = v3dm_dot(&norm, Rd);
+    v3dm_unit(Ro, &tmpro);
+    v3dm_unit(Rd, &tmprd);
+    dotRo = v3dm_dot(&n_unit, &tmpro);
+    dotRd = v3dm_dot(&n_unit, &tmprd);
     if (dotRd != 0) {
       t = -(dotRo + d) / (dotRd);
       if (t > 0) {
+        *t_result = t;
         v3dm_scale(Rd, t, result);
         v3dm_add(Ro, result, result);
         return;
       }
     }
   }
+  *t_result = INFINITY;
   v3dm_assign(NAN, NAN, NAN, result);
 }
 
-void castARay_primitive(Object *objects, Vector3 *Ro, Vector3 *Rd, int j, ObjectPlus *result, int obj_size) {
-  double closest_distance, distance;
+//calculates intersection with light
+void intersection_light(Vector3 *Ro, Vector3 *light_pos, double *t) {
+  double xdiv, ydiv, zdiv;
+  Vector3 Rd, unit_Rd;
+  v3dm_subtract(light_pos, Ro, &Rd);
+  v3dm_unit(&Rd, &unit_Rd);
+  *t = Rd.x/unit_Rd.x;
+}
+
+void castARay_primitive(Object *objects, Vector3 *Ro, Vector3 *Rd, int j, ObjectPlus *result, int obj_size, int ch, Light *light) {
+  double closest_distance, distance, t_result, t_closest;
   closest_distance = NAN;
   Vector3 _closest_intersection;
   Vector3 *closest_intersection = &_closest_intersection;
   Color *color;
   Object object;
-  //TODO: normal loops, plane first loop, weird data loop, repeat: found in castARay from casting a ray with new_object
-  //printf("INNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN\n");
+  t_closest = INFINITY;
   for(int x = 0;  x < obj_size; x++) {
     object = objects[x];
-    //printf("%s\n", object.kind);
-    if (strcmp(object.kind, "CAMERA") != 0) {
-      //printf("position: %f, %f, %f\n", object.position.x, object.position.y, object.position.z);
+    if (strcmp(object.kind, "CAMERA") != 0) {;
       if (strcmp(object.kind, "SPHERE") == 0) {
-        //printf("1\n");
-        intersection_sphere(Rd, Ro, object.position.x, object.position.y, object.position.z, object.radius, result->intersection);
-        //printf("2\n");
+        intersection_sphere(Rd, Ro, object.position.x, object.position.y, object.position.z, object.radius, result->intersection, &t_result, ch);
       } else if (strcmp(object.kind, "PLANE") == 0) {
-        //printf("3\n");
-        intersection_plane(Ro, Rd, object.normal, object.position, result->intersection);
-        //printf("4\n");
+        intersection_plane(Ro, Rd, object.normal, object.position, result->intersection, &t_result);
       }
-      if (!isnan(result->intersection->x) && !isnan(result->intersection->y) && !isnan(result->intersection->z)) {
-        //printf("5\n");
-        distance = v3dm_pointToPointDistance(Ro, result->intersection);
-        if (isnan(closest_distance)) {
-          //printf("6\n");
-          closest_distance = distance;
+
+      //check t-value instead of distance
+      if (t_result > 0.0 && t_result < INFINITY) {
+        if (t_result < t_closest) {
           v3dm_assign(result->intersection->x, result->intersection->y, result->intersection->z, closest_intersection);
           result->object = object;
-          result->valid = 1;
-        } else if (distance < closest_distance) {
-          //printf("7\n");
-          closest_distance = distance;
-          v3dm_assign(result->intersection->x, result->intersection->y, result->intersection->z, closest_intersection);
-          result->object = object;
+          t_closest = t_result;
+          result->t = t_result;
           result->valid = 1;
         }
       }
-      //printf("8\n");
     }
-    //printf("9\n");
+
+    if (ch == 1) {
+      intersection_light(Ro, &light->position, &t_result);
+      if (t_result > 0.0 && t_result < INFINITY) {
+        if (t_result < t_closest) {
+          //printf("tres: %f, newt: %f\n", t_result, result->t);
+          result->t = t_result;
+          result->valid = 1;
+        } else {
+          printf("HERE!\n");
+          result->valid = 2;
+        }
+      }
+    }
   }
-  //TODO: CHANGE FINAL_COLOR
-  //TODO: SPHERE NOT SHOWING UP IN IMAGE EVEN THOUGH REPORTED CLOSEST OBJ
+
   v3dm_assign(closest_intersection->x, closest_intersection->y, closest_intersection->z, result->intersection);
-  //printf("10\n");
   return;
 }
 
@@ -836,6 +948,8 @@ void castARay(Object *objects, Vector3 *Ro, Vector3 *Rd, Light *lights, int i, i
   Vector3 *hit = &_hit;
   ObjectPlus _result;
   ObjectPlus *result = &_result;
+  Vector3 _tmpro;
+  Vector3 *tmpro = &_tmpro;
   Vector3 _Ro2;
   Vector3 *Ro2 = &_Ro2;
   Vector3 _Rd2;
@@ -850,94 +964,106 @@ void castARay(Object *objects, Vector3 *Ro, Vector3 *Rd, Light *lights, int i, i
   Vector3 *n = &_n;
   Color _light_color;
   Color *light_color = &_light_color;
-  Light light;
-  struct Object new_objects[1];
+  Light light = lights[0];
+  struct Object new_object;
   result->intersection = &_intersection;
   result->valid = 0;
-  double epsilon;
-  //result->object = NULL;
+  double epsilonx, epsilony, epsilonz, t_new;
   double n_dot_l;
 
+  castARay_primitive(objects, Ro, Rd, j, result, obj_size, 0, &light);
+
+  if (result->valid == 0) {
+    final_color->r = 0.0;
+    final_color->g = 0.0;
+    final_color->b = 0.0;
+    return;
+  }
+
+  v3dm_assign(result->intersection->x, result->intersection->y, result->intersection->z, Ro2);
+  new_object = result->object;
+  t_new = result->t;
+  result->intersection = &_intersection;
+  result->t = INFINITY;
+
+  v3dm_subtract(Ro2, Ro, v);
+  v3dm_unit(v, v);
+
+  v3dm_subtract(&light.position, Ro2, l);
+  v3dm_unit(l, l);
+
+  if (new_object.normal.x != 0 || new_object.normal.y != 0 || new_object.normal.z != 0) {
+    v3dm_unit(&new_object.normal, &new_object.normal);
+    v3dm_reflect(l, &new_object.normal, r);
+    n_dot_l = v3dm_dot(l, &new_object.normal);
+    epsilonx = 0.1 * new_object.normal.x;
+    epsilony = 0.1 * new_object.normal.y;
+    epsilonz = 0.1 * new_object.normal.z;
+
+  } else {
+    epsilonz = 0.1 * new_object.radius;
+    v3dm_subtract(Ro2, &new_object.position, n);
+    v3dm_unit(n, n);
+    v3dm_reflect(l, n, r);
+    v3dm_unit(r, r);
+    n_dot_l = v3dm_dot(l, n);
+    epsilonx = epsilonz * n->x;
+    epsilony = epsilonz * n->y;
+    epsilonz = epsilonz * n->y;
+  }
+
+
   for (int x = 0; x < l_size; x++) {
-    light = lights[x];
-    v3dm_unit(&light.direction, &light.direction);
-    //printf("x: %d\n", x);
-    castARay_primitive(objects, Ro, Rd, j, result, obj_size);
-    //printf("result: %f, %f, %f\n", result->intersection->x, result->intersection->y, result->intersection->z);
 
-    //no intersection found
-    if (result->valid == 0) {
-      //TODO: CHANGE BACK TO BLACK LATER, CURRENTLY DEBUG CODE TO FIGURE OUT WHAT'S GOING ON WITH SPHERE
-      //HALF THE IMAGE IS COMING BACK ALL FUCKY LIKE THIS
-      final_color->r = 0.5;
-      final_color->g = 0.1;
-      final_color->b = 0.1;
-      return;
-    }
+    v3dm_subtract(&light.position, Ro2, Rd2);
+    v3dm_unit(Rd2, Rd2);
+    v3dm_assign(Ro2->x, Ro2->y, Ro2->z, tmpro);
+    v3dm_assign(tmpro->x + epsilonx, tmpro->y + epsilony, tmpro->z + epsilonz, tmpro);
 
-    Ro2 = result->intersection;
-    new_objects[0] = result->object;
-    v3dm_subtract(Ro2, Ro, v);
-    v3dm_unit(v, v);
-    if (!isnan(Ro2->x) && !isnan(Ro2->y) && !isnan(Ro2->z)) {
-      v3dm_subtract(&light.position, Ro2, l);
-      v3dm_unit(l, l);
+    castARay_primitive(objects, tmpro, Rd2, j, result, obj_size, 1, &light);
 
-      if (!isnan(new_objects[0].normal.x) && !isnan(new_objects[0].normal.y) && !isnan(new_objects[0].normal.z)) {
-        v3dm_reflect(l, &new_objects[0].normal, r);
-        n_dot_l = v3dm_dot(l, &new_objects[0].normal);
-
-      } else {
-        epsilon = 0.1 * new_objects[0].radius;
-        v3dm_subtract(Ro2, &new_objects[0].position, n);
-        v3dm_unit(n, n);
-        v3dm_reflect(l, n, r);
-        v3dm_unit(r, r);
-        n_dot_l = v3dm_dot(l, n);
-      }
-      //TODO: RD2 SOMETIMES NAN
-      v3dm_subtract(&light.position, Ro2, Rd2);
-      v3dm_unit(Rd2, Rd2);
-      v3dm_unit(Ro2, Ro2);
-      v3dm_assign(Ro2->x + epsilon, Ro2->y + epsilon, Ro2->z + epsilon, Ro2);
-      //printf("Rd2: %f, %f, %f\n", Rd2->x, Rd2->y, Rd2->z);
-      //TODO: LIGHTING SETUP
-
-      castARay_primitive(new_objects, Ro2, Rd2, j, result, 1);
-      //toggling light here maybe??
-      if (result->valid == 1) {
-        final_color->r = 0.0;
-        final_color->g = 0.0;
-        final_color->b = 0.0;
-        return;
-      }
-    } else {
-      final_color->r = 0.0;
-      final_color->g = 0.0;
-      final_color->b = 0.5;
-      return;
+    //shadows
+    //move epsilon off; intersection with light, intersection < distance to light but > 0
+    //this causes messed up image currently, but shadows are correct
+    if (result->valid == 2) {
+      continue;
     }
 
     light_color = &light.color;
 
-    //TODO: toggling light for shadow
-
-
     //radial attenuation
-    double dl = v3dm_pointToPointDistance(&light.position, intersection);
+    double dl = v3dm_pointToPointDistance(&light.position, Ro2);
     double f_rad = 1.0;
     if (dl < 1000) {
       f_rad = 1/(light.radial.a2 * dl * dl + light.radial.a1 * dl + light.radial.a0);
     }
+
+    //TODO: SPOTLIGHTS NOT QUITE WORKING. WEIRD AF ANGLE THING
+
     //angular attenuation
-    double f_ang = 1.0;
-    Vector3 *vo = malloc(sizeof(Vector3));
-    v3dm_subtract(intersection, &light.position, vo);
+    double f_ang;
+    Vector3 _vo, _vl;
+    Vector3 *vo = &_vo;
+    Vector3 *vl = &_vl;
+    v3dm_subtract(Ro2, &light.position, vo);
+    //printf("%f, %f, %f\n", Ro2->x, Ro2->y, Ro2->z);
+    //printf("pos: %f, %f, %f\ndir: %f, %f, %f\n", light.position.x, light.position.y, light.position.z, light.direction.x, light.direction.y, light.direction.z);
     v3dm_unit(vo, vo);
+    v3dm_subtract(&light.direction, &light.position, vl);
+    //printf("%f, %f, %f\n", vl->x, vl->y, vl->z);
+    v3dm_unit(vl, vl);
+
     if (strcmp(light.kind, "SPOT") == 0) {
-      double vo_dot_vl = v3dm_dot(vo, &light.direction);
-      double alpha = acos(vo_dot_vl);
+      //printf("ang: %f\n", light.angular);
+      //printf("%f, %f, %f\n", light.direction.x, light.direction.y, light.direction.z);
+      double vo_dot_vl = v3dm_dot(vo, vl);
+      //printf("%f\n", light.theta);
+      double alpha = acos(vo_dot_vl) * (180/M_PI);
+      //TODO: ANGULAR ATTENUATION FOR SPOTLIGHTS
+      //printf("%f\n", alpha * 180/M_PI);
+      //printf("%f, %f\n", alpha, light.theta);
       if (alpha > light.theta) {
+        //printf("alpha: %f, theta: %f\nvo: %f, %f, %f\nvl: %f, %f, %f\n", alpha, light.theta, vo->x, vo->y, vo->z, vl->x, vl->y, vl->z);
         f_ang = 0.0;
       } else {
         f_ang = pow(vo_dot_vl, light.angular);
@@ -948,10 +1074,10 @@ void castARay(Object *objects, Vector3 *Ro, Vector3 *Rd, Light *lights, int i, i
     //calculate the diffuse reflection
     double Idiff_r, Idiff_g, Idiff_b;
     if (n_dot_l > 0.0) {
-      //TODO: NEVER ENTERS HERE
-      Idiff_r = new_objects[0].diffuse_color.r * light_color->r * (n_dot_l);
-      Idiff_g = new_objects[0].diffuse_color.g * light_color->g * (n_dot_l);
-      Idiff_b = new_objects[0].diffuse_color.b * light_color->b * (n_dot_l);
+      //printf("%f\n", n_dot_l);
+      Idiff_r = new_object.diffuse_color.r * light_color->r * (n_dot_l);
+      Idiff_g = new_object.diffuse_color.g * light_color->g * (n_dot_l);
+      Idiff_b = new_object.diffuse_color.b * light_color->b * (n_dot_l);
     } else {
       Idiff_r = 0.0;
       Idiff_g = 0.0;
@@ -959,26 +1085,27 @@ void castARay(Object *objects, Vector3 *Ro, Vector3 *Rd, Light *lights, int i, i
     }
 
     //calculate the specular reflection
-    double Ispec_r, Ispec_g, Ispec_b;
-    if (v3dm_dot(v,r) > 0) {
-      //TODO: NEVER ENTERS HERE
-      Ispec_r = new_objects[0].specular_color.r * light_color->r * pow(v3dm_dot(v, r), 20);
-      Ispec_g = new_objects[0].specular_color.g * light_color->g * pow(v3dm_dot(v, r), 20);
-      Ispec_b = new_objects[0].specular_color.b * light_color->b * pow(v3dm_dot(v, r), 20);
-      printf("color: %f, %f, %f\n", new_objects[0].diffuse_color.r, new_objects[0].diffuse_color.g, new_objects[0].diffuse_color.b);
+    double Ispec_r = 0.0;
+    double Ispec_g = 0.0;
+    double Ispec_b = 0.0;
+    if (v3dm_dot(v,r) > 0.0) {
+
+      Ispec_r = new_object.specular_color.r * light_color->r * pow(v3dm_dot(v, r), 20);
+      Ispec_g = new_object.specular_color.g * light_color->g * pow(v3dm_dot(v, r), 20);
+      Ispec_b = new_object.specular_color.b * light_color->b * pow(v3dm_dot(v, r), 20);
+      //printf("color: %f, %f, %f\n", new_object.diffuse_color.r, new_object.diffuse_color.g, new_object.diffuse_color.b);
     } else {
       Ispec_r = 0.0;
       Ispec_g = 0.0;
       Ispec_b = 0.0;
     }
 
-    final_color->r += f_ang *f_rad * (Idiff_r+Ispec_r);
-    final_color->g += f_ang *f_rad * (Idiff_g+Ispec_g);
-    final_color->b += f_ang *f_rad * (Idiff_b+Ispec_b);
+    final_color->r += (f_ang * f_rad * (Idiff_r + Ispec_r));
+    final_color->g += (f_ang * f_rad * (Idiff_g + Ispec_g));
+    final_color->b += (f_ang * f_rad * (Idiff_b + Ispec_b));
+
+    light = lights[x+1];
   }
-  //final_color->r = new_objects[0].diffuse_color.r;
-  //final_color->g = new_objects[0].diffuse_color.g;
-  //final_color->b = new_objects[0].diffuse_color.b;
   return;
 }
 
@@ -997,18 +1124,15 @@ int* render(double width, double height, double xRes, double yRes, Scene *scene,
   v3dm_assign(0, 0, 0, Ro);
   int counter = 0;
   for (int j = 0; j < yRes; j++) {
+    //-y for some reason flips it the right way up
     y =  (height/2) - (j * (height/yRes)) - (0.5 * (height/yRes));
     //printf("%d\n", j);
     for (int i = 0; i < xRes; i++) {
       x = -(width/2) + (i * (width/xRes)) + (0.5 * (width/xRes));
-      //TODO: FIND OUT WHY THIS WORKS MAYBE IF I HAVE TIME; x = y, y = -x was solution
       v3dm_assign(x, y, -1, Pij);
       v3dm_add(Pij, Ro, Rd);
       v3dm_unit(Rd, Rd);
 
-      //TODO: RD IS SOMETIMES NAN.
-      //TODO: SPHERE INTERSECTIONS AREN'T WORKING AND HALF OF IMAGE IS NOT USED
-      //here
       castARay(scene->objects, Ro, Rd, scene->lights, i, j, color, l_size, obj_size);
       clamp(color);
       colors[counter] = (int) (color->r * 255);
@@ -1017,6 +1141,9 @@ int* render(double width, double height, double xRes, double yRes, Scene *scene,
       counter++;
       colors[counter] = (int) (color->b * 255);
       counter++;
+      color->r = 0.0;
+      color->g = 0.0;
+      color->b = 0.0;
     }
   }
   return colors;

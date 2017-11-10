@@ -28,6 +28,7 @@ typedef struct Light {
 typedef struct ObjectPlus {
   struct Object object;
   struct Vector3 *intersection;
+  double t;
   int valid;
 } ObjectPlus;
 

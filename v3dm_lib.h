@@ -63,11 +63,12 @@ static inline double v3dm_pointToPointDistance(Vector3 *a, Vector3 *b) {
 
 static inline double v3dm_pointToPlaneDistance(struct Vector3 normal, struct Vector3 point_on, Vector3 *point_off) {
   double dot, result;
-  Vector3 tmp;
+  Vector3 tmp, n_unit;
   v3dm_subtract(point_off, &point_on, &tmp);
-  dot = v3dm_dot(&normal, &tmp);
-  result = dot/v3dm_magnitude(&normal);
-  return result;
+  v3dm_unit(&tmp, &tmp);
+  v3dm_unit(&normal, &n_unit);
+  dot = abs(v3dm_dot(&tmp, &n_unit));
+  return dot;
 }
 
 static inline void v3dm_cross(Vector3 *a, Vector3 *b, Vector3 *c) {
@@ -77,9 +78,10 @@ static inline void v3dm_cross(Vector3 *a, Vector3 *b, Vector3 *c) {
 }
 
 static inline void v3dm_reflect(Vector3 *a, Vector3 *n, Vector3 *b) {
-  Vector3 c, n_unit;
+  Vector3 c, n_unit, a_unit;
+  v3dm_unit(a, &a_unit);
   v3dm_unit(n, &n_unit);
-  v3dm_scale(&n_unit, 2 * v3dm_dot(a, n), &c);
-  v3dm_subtract(&c, a, b);
+  v3dm_scale(&n_unit, 2*v3dm_dot(&a_unit,&n_unit), &c);
+  v3dm_subtract(a, &c, b);
 
 }
