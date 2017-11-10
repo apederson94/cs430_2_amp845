@@ -528,7 +528,6 @@ void parse_angular(FILE *fh, Object *obj) {
 }
 
 
-//TODO: PLANE specular_color POTENTIALLY WRONG
 //comprehensive parser that combines all parser helper functions
 Scene* parse_csv(FILE *fh, Scene *scene, char *character, Object *objects, Light *lights, int *obj_size, int *l_size) {
   int l_counter = 0;
@@ -570,9 +569,6 @@ Scene* parse_csv(FILE *fh, Scene *scene, char *character, Object *objects, Light
       if (*character != EOF && strcmp(new_obj->kind, "SPHERE") == 0) {
         rewind_file(fh, str);
         strcpy(str, "");
-        /*printf("%s, r: %f\ncr: %f, cg: %f, cb: %f\ndcr: %f, dcg: %f, dcb: %f\nscr: %f, scg: %f, scb: %f\nx: %f, y: %f, z: %f\n", new_obj->kind, new_obj->radius,
-        new_obj->color.r, new_obj->color.g, new_obj->color.b, new_obj->diffuse_color.r, new_obj->diffuse_color.g, new_obj->diffuse_color.b, new_obj->specular_color.r,
-        new_obj->specular_color.g, new_obj->specular_color.b, new_obj->position.x, new_obj->position.y, new_obj->position.z);*/
       }
     } else if (strcmp(new_obj->kind, "PLANE") == 0) {
       while (strcmp(str, "light") != 0 && strcmp(str, "sphere") != 0 && strcmp(str, "camera") != 0 && *character != EOF) {
@@ -603,10 +599,6 @@ Scene* parse_csv(FILE *fh, Scene *scene, char *character, Object *objects, Light
       if (*character != EOF && strcmp(new_obj->kind, "PLANE") == 0) {
         rewind_file(fh, str);
         strcpy(str, "");
-        /*printf("%s, nx: %f, ny: %f, nz: %f\ncr: %f, cg: %f, cb: %f\ndcr: %f, dcg: %f, dcb: %f\nscr: %f, scg: %f, scb: %f\nx: %f, y: %f, z: %f\n",
-        new_obj->kind, new_obj->normal.x, new_obj->normal.y, new_obj->normal.z, new_obj->color.r, new_obj->color.g, new_obj->color.b, new_obj->diffuse_color.r,
-        new_obj->diffuse_color.g, new_obj->diffuse_color.b, new_obj->specular_color.r, new_obj->specular_color.g, new_obj->specular_color.b, new_obj->position.x,
-        new_obj->position.y, new_obj->position.z);*/
       }
     } else if (strcmp(new_obj->kind, "LIGHT") == 0) {
       Light *new_light = malloc(sizeof(Light));
@@ -650,9 +642,6 @@ Scene* parse_csv(FILE *fh, Scene *scene, char *character, Object *objects, Light
       if (*character != EOF && strcmp(new_obj->kind, "LIGHT") == 0) {
         rewind_file(fh, str);
         strcpy(str, "");
-        //printf("%s, cr: %f, cg: %f, cb: %f\na2: %f, a1: 5f, a0: %f\nth: %f, ang: %f\ndirx: %f, diry: %f, dirz: %f\n",
-        /*new_obj->kind, new_obj->color.r, new_obj->color.g, new_obj->color.b, new_obj->radial.a2, new_obj->radial.a1, new_obj->radial.a0,
-        new_obj->theta, new_obj->direction.x, new_obj->direction.y, new_obj->direction.z);*/
       } else if (*character == EOF) {
         rewind_file(fh, character);
         strcpy(str, "");
@@ -685,8 +674,6 @@ Scene* parse_csv(FILE *fh, Scene *scene, char *character, Object *objects, Light
       objects[obj_counter] = *new_obj;
       obj_counter += 1;
     }
-    //sprintf(character, "%c", fgetc(fh));
-    //ungetc(*character, fh);
   }
   *obj_size = obj_counter;
   *l_size = l_counter;
@@ -713,25 +700,6 @@ void skip_non_alphanum(FILE *fh){
   //replaces alphanum character that was pulled from the file
   ungetc(character, fh);
 }
-
-//rewinds linked list and returns first object in list recursively
-/*Scene* rewind_scene(Scene *scene) {
-  if (scene->object->prev->kind != NULL && scene->light->prev->kind != NULL) {
-    scene->object = scene->object->prev;
-    scene->light = scene->light->prev;
-    //print("%s, %s", scene->object->kind, scene->light->kind);
-    rewind_scene(scene);
-  } else if (scene->object->prev->kind != NULL) {
-    scene->object = scene->object->prev;
-    //printf("%s\n", scene->object->kind);
-    rewind_scene(scene);
-  } else if (scene->light->prev->kind != NULL){
-    scene->light = scene->light->prev;
-    rewind_scene(scene);
-  } else {
-    return scene;
-  }
-}*/
 
 //returns camera width recursively
 double get_width(Object *objects, int obj_size) {
@@ -769,6 +737,7 @@ double argv_to_double(char const *str, int index, double result) {
 
     //multiply result by 10 to shift values left
     updated_result *= 10;
+
     //character - '0' returns numerical value of any number 0-9
     updated_result += character - '0';
     argv_to_double(str, index + 1, updated_result);
@@ -819,7 +788,6 @@ void intersection_sphere(Vector3 *Rd, Vector3 *Ro, double Cx, double Cy, double 
   c = (subtracted->x * subtracted->x) + (subtracted->y * subtracted->y) + (subtracted->z * subtracted->z) - (radius * radius);
   t0 += (-b - (sqrt((b*b) - (4*c))))/2.0;
   t1 += (-b + (sqrt((b*b) - (4*c))))/2.0;
-  //TODO: UNFUCK THIS LOGIC
   if (!isnan(t0) && !isnan(t1)) {
     if (t0 >= 0.0 && t1 >= 0.0) {
       if (t0 < t1) {
@@ -925,7 +893,6 @@ void castARay_primitive(Object *objects, Vector3 *Ro, Vector3 *Rd, int j, Object
       intersection_light(Ro, &light->position, &t_result);
       if (t_result > 0.0 && t_result < INFINITY) {
         if (t_result < t_closest) {
-          //printf("tres: %f, newt: %f\n", t_result, result->t);
           result->t = t_result;
           result->valid = 1;
         } else {
@@ -1022,8 +989,6 @@ void castARay(Object *objects, Vector3 *Ro, Vector3 *Rd, Light *lights, int i, i
     castARay_primitive(objects, tmpro, Rd2, j, result, obj_size, 1, &light);
 
     //shadows
-    //move epsilon off; intersection with light, intersection < distance to light but > 0
-    //this causes messed up image currently, but shadows are correct
     if (result->valid == 2) {
       continue;
     }
@@ -1037,32 +1002,21 @@ void castARay(Object *objects, Vector3 *Ro, Vector3 *Rd, Light *lights, int i, i
       f_rad = 1/(light.radial.a2 * dl * dl + light.radial.a1 * dl + light.radial.a0);
     }
 
-    //TODO: SPOTLIGHTS NOT QUITE WORKING. WEIRD AF ANGLE THING
-
     //angular attenuation
     double f_ang;
     Vector3 _vo, _vl;
     Vector3 *vo = &_vo;
     Vector3 *vl = &_vl;
     v3dm_subtract(Ro2, &light.position, vo);
-    //printf("%f, %f, %f\n", Ro2->x, Ro2->y, Ro2->z);
-    //printf("pos: %f, %f, %f\ndir: %f, %f, %f\n", light.position.x, light.position.y, light.position.z, light.direction.x, light.direction.y, light.direction.z);
     v3dm_unit(vo, vo);
     v3dm_subtract(&light.direction, &light.position, vl);
-    //printf("%f, %f, %f\n", vl->x, vl->y, vl->z);
     v3dm_unit(vl, vl);
 
     if (strcmp(light.kind, "SPOT") == 0) {
-      //printf("ang: %f\n", light.angular);
-      //printf("%f, %f, %f\n", light.direction.x, light.direction.y, light.direction.z);
       double vo_dot_vl = v3dm_dot(vo, vl);
-      //printf("%f\n", light.theta);
       double alpha = acos(vo_dot_vl) * (180/M_PI);
-      //TODO: ANGULAR ATTENUATION FOR SPOTLIGHTS
-      //printf("%f\n", alpha * 180/M_PI);
-      //printf("%f, %f\n", alpha, light.theta);
       if (alpha > light.theta) {
-        //printf("alpha: %f, theta: %f\nvo: %f, %f, %f\nvl: %f, %f, %f\n", alpha, light.theta, vo->x, vo->y, vo->z, vl->x, vl->y, vl->z);
+
         f_ang = 0.0;
       } else {
         f_ang = pow(vo_dot_vl, light.angular);
@@ -1073,7 +1027,6 @@ void castARay(Object *objects, Vector3 *Ro, Vector3 *Rd, Light *lights, int i, i
     //calculate the diffuse reflection
     double Idiff_r, Idiff_g, Idiff_b;
     if (n_dot_l > 0.0) {
-      //printf("%f\n", n_dot_l);
       Idiff_r = new_object.diffuse_color.r * light_color->r * (n_dot_l);
       Idiff_g = new_object.diffuse_color.g * light_color->g * (n_dot_l);
       Idiff_b = new_object.diffuse_color.b * light_color->b * (n_dot_l);
@@ -1092,7 +1045,6 @@ void castARay(Object *objects, Vector3 *Ro, Vector3 *Rd, Light *lights, int i, i
       Ispec_r = new_object.specular_color.r * light_color->r * pow(v3dm_dot(v, r), 20);
       Ispec_g = new_object.specular_color.g * light_color->g * pow(v3dm_dot(v, r), 20);
       Ispec_b = new_object.specular_color.b * light_color->b * pow(v3dm_dot(v, r), 20);
-      //printf("color: %f, %f, %f\n", new_object.diffuse_color.r, new_object.diffuse_color.g, new_object.diffuse_color.b);
     } else {
       Ispec_r = 0.0;
       Ispec_g = 0.0;
@@ -1125,7 +1077,6 @@ int* render(double width, double height, double xRes, double yRes, Scene *scene,
   for (int j = 0; j < yRes; j++) {
     //-y for some reason flips it the right way up
     y =  (height/2) - (j * (height/yRes)) - (0.5 * (height/yRes));
-    //printf("%d\n", j);
     for (int i = 0; i < xRes; i++) {
       x = -(width/2) + (i * (width/xRes)) + (0.5 * (width/xRes));
       v3dm_assign(x, y, -1, Pij);
